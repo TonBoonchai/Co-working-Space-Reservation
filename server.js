@@ -21,13 +21,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Route files
-const hospitals = require("./routes/hospitals");
+const coworkingspaces = require("./routes/coworkingspaces");
 const auth = require("./routes/auth");
-const appointments = require("./routes/appointments");
+const reservations = require("./routes/reservations");
 
-app.use("/api/v1/hospitals", hospitals);
+app.use("/api/v1/coworkingspaces", coworkingspaces);
 app.use("/api/v1/auth", auth);
-app.use("/api/v1/appointments", appointments);
+app.use("/api/v1/reservations", reservations);
 
 const PORT = process.env.PORT || 5000;
 

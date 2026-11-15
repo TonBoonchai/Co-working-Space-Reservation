@@ -5,11 +5,12 @@ const User = require("../models/User");
 //@access   Public
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, tel, email, password, role } = req.body;
 
     // Create user
     const user = await User.create({
       name,
+      tel,
       email,
       password,
       role,
@@ -17,8 +18,24 @@ exports.register = async (req, res, next) => {
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
-    res.status(400).json({ success: false });
     console.log(err.stack);
+
+    // Duplicate email
+    if (err.code === 11000) {
+      return res
+        .status(400)
+        .json({ success: false, message: "This email is already registered" });
+    }
+
+    // Validation errors (missing name, invalid Thai telephone number, ...)
+    if (err.name === "ValidationError") {
+      const message = Object.values(err.errors)
+        .map((e) => e.message)
+        .join(", ");
+      return res.status(400).json({ success: false, message });
+    }
+
+    res.status(400).json({ success: false, message: "Cannot register user" });
   }
 };
 
@@ -84,7 +101,9 @@ const sendTokenResponse = (user, statusCode, res) => {
     //add for frontend
     _id: user._id,
     name: user.name,
+    tel: user.tel,
     email: user.email,
+    role: user.role,
     //end for frontend
     token,
   });

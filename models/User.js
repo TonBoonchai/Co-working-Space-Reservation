@@ -1,11 +1,18 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { THAI_PHONE_REGEX, THAI_PHONE_MESSAGE } = require("../utils/validators");
 
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, "Please add a name"],
+  },
+  tel: {
+    type: String,
+    required: [true, "Please add a telephone number"],
+    trim: true,
+    match: [THAI_PHONE_REGEX, THAI_PHONE_MESSAGE],
   },
   email: {
     type: String,
@@ -37,6 +44,9 @@ const UserSchema = new mongoose.Schema({
 
 // Encrypt password using bcrypt
 UserSchema.pre("save", async function () {
+  // Only hash when the password was set or changed
+  if (!this.isModified("password")) return;
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
