@@ -1,15 +1,16 @@
 {
-  "name": "vacq",
+  "name": "coworking-space-reservation",
   "version": "1.0.0",
-  "description": "",
+  "description": "REST API for reserving co-working spaces (SW Dev Practice term project #6, built on VacQ)",
   "license": "ISC",
   "author": "",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "test:api": "newman run postman/Coworking-Space-Reservation.postman_collection.json -e postman/Coworking-Space-Reservation.postman_environment.json",
+    "test:api:report": "newman run postman/Coworking-Space-Reservation.postman_collection.json -e postman/Coworking-Space-Reservation.postman_environment.json -r cli,htmlextra --reporter-htmlextra-export newman/report.html"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

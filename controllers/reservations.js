@@ -111,6 +111,14 @@ exports.addReservation = async (req, res, next) => {
       });
     }
 
+    // Same day, inside opening hours, in the future, end after start
+    const { startTime, endTime } = req.body;
+    const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
+
+    if (timeError) {
+      return res.status(400).json({ success: false, message: timeError });
+    }
+
     // If the user is not an admin, they can only create 3 reservations
     if (req.user.role !== "admin") {
       const existedReservations = await Reservation.countDocuments({
@@ -123,14 +131,6 @@ exports.addReservation = async (req, res, next) => {
           message: `The user with ID ${req.user.id} has already made ${MAX_RESERVATIONS} reservations`,
         });
       }
-    }
-
-    // Same day, inside opening hours, in the future, end after start
-    const { startTime, endTime } = req.body;
-    const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
-
-    if (timeError) {
-      return res.status(400).json({ success: false, message: timeError });
     }
 
     const reservation = await Reservation.create({
