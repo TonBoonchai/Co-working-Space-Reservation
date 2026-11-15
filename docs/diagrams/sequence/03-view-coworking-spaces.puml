@@ -1,0 +1,41 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: View Co-working Spaces (GET /api/v1/coworkingspaces)
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:coworkingspaces" as router
+participant "<<controllers>>\n:coworkingspaces" as ctrl
+participant "<<model>>\n:CoworkingSpace" as model
+database "<<MongoDB>>\n:coworkingspaces" as db
+
+== Get all co-working spaces (public) ==
+client -> server ++ : req.get('/api/v1/coworkingspaces')\n?select=&sort=&page=&limit=
+server -> router ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
+router -> ctrl ++ : getCoworkingSpaces
+ctrl -> model ++ : find(filter).select().sort().skip().limit()
+model -> db ++ : CoworkingSpaceSchema
+db --> model -- : coworkingSpaces
+model --> ctrl -- : coworkingSpaces
+ctrl --> client : 200 {success:true, count, pagination,\ndata:[{name, address, tel, openTime, closeTime}]}
+deactivate ctrl
+deactivate router
+deactivate server
+
+== Get one co-working space (public) ==
+client -> server ++ : req.get('/api/v1/coworkingspaces/:id')
+server -> router ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
+router -> ctrl ++ : getCoworkingSpace
+ctrl -> model ++ : findById(id)
+model -> db ++ : CoworkingSpaceSchema
+db --> model -- : coworkingSpace
+model --> ctrl -- : coworkingSpace
+alt not found
+  ctrl --> client : 404 {success:false, message}
+else found
+  ctrl --> client : 200 {success:true, data: coworkingSpace}
+end
+deactivate ctrl
+deactivate router
+deactivate server
+@enduml

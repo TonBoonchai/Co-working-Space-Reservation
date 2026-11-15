@@ -1,0 +1,38 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: User / Admin Log-in (POST /api/v1/auth/login)
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:auth" as router
+participant "<<controllers>>\n:auth" as ctrl
+participant "<<model>>\n:User" as model
+database "<<MongoDB>>\n:users" as db
+
+client -> server ++ : req.post('/api/v1/auth/login')\n{email, password}
+server -> router ++ : app.use('/api/v1/auth', auth)
+router -> ctrl ++ : login
+alt email or password missing
+  ctrl --> client : 400 {success:false,\nmsg: "Please provide an email and password"}
+else
+  ctrl -> model ++ : findOne({email}).select('+password')
+  model -> db ++ : UserSchema
+  db --> model -- : user
+  model --> ctrl -- : user
+  alt user not found
+    ctrl --> client : 400 {success:false, msg: "Invalid credentials"}
+  else user found
+    ctrl -> model ++ : matchPassword(password)\n(bcrypt.compare)
+    model --> ctrl -- : isMatch
+    alt wrong password
+      ctrl --> client : 401 {success:false, msg: "Invalid credentials"}
+    else password matches
+      ctrl -> ctrl : sendTokenResponse(user, 200)\ngetSignedJwtToken()
+      ctrl --> client : 200 {success:true, ..., token}\n+ httpOnly token cookie
+    end
+  end
+end
+deactivate ctrl
+deactivate router
+deactivate server
+@enduml

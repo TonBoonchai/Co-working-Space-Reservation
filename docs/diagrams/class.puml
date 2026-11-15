@@ -1,0 +1,109 @@
+@startuml
+title Co-working Space Reservation - Class Diagram (UML Profile for REST API)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 70
+hide circle
+hide empty members
+skinparam class {
+  BackgroundColor<<Application>> #FFF2CC
+  BorderColor<<Application>> #D6B656
+  BackgroundColor<<Resource>> #D5E8D4
+  BorderColor<<Resource>> #82B366
+  BackgroundColor<<Representation>> #D5E8D4
+  BorderColor<<Representation>> #82B366
+}
+
+package "Co-working Space Reservation" <<Frame>> {
+
+  class "CoworkingSpaceService" as App <<Application>>
+
+  ' ---------- /auth ----------
+  class "Auth" as Auth <<Resource>>
+  class "Register" as Register <<Resource>> {
+    <<POST>> +register(): User
+  }
+  class "Login" as Login <<Resource>> {
+    <<POST>> +login(): User
+  }
+  class "Me" as Me <<Resource>> {
+    <<GET>> +getMe(): User
+  }
+  class "Logout" as Logout <<Resource>> {
+    <<GET>> +logout(): void
+  }
+
+  ' ---------- /coworkingspaces ----------
+  class "CoworkingSpaces" as Spaces <<Resource>> {
+    <<GET>> +getCoworkingSpaces(): CoworkingSpace
+    <<POST>> +createCoworkingSpace(): CoworkingSpace
+  }
+  class "CoworkingSpace" as Space <<Resource>> {
+    <<GET>> +getCoworkingSpace(): CoworkingSpace
+    <<PUT>> +updateCoworkingSpace(): CoworkingSpace
+    <<DELETE>> +deleteCoworkingSpace(): void
+  }
+  class "SpaceReservations" as SpaceResvs <<Resource>> {
+    <<GET>> +getReservations(): Reservation
+    <<POST>> +addReservation(): Reservation
+  }
+
+  ' ---------- /reservations ----------
+  class "Reservations" as Resvs <<Resource>> {
+    <<GET>> +getReservations(): Reservation
+  }
+  class "Reservation" as Resv <<Resource>> {
+    <<GET>> +getReservation(): Reservation
+    <<PUT>> +updateReservation(): Reservation
+    <<DELETE>> +deleteReservation(): void
+  }
+
+  ' ---------- representations ----------
+  class "User" as UserRep <<Representation>> {
+    -name
+    -tel
+    -email
+    -password
+    -role
+    -createdAt
+  }
+  class "CoworkingSpace" as SpaceRep <<Representation>> {
+    -name
+    -address
+    -tel
+    -openTime
+    -closeTime
+    -createdAt
+  }
+  class "Reservation" as ResvRep <<Representation>> {
+    -startTime
+    -endTime
+    -user
+    -coworkingSpace
+    -createdAt
+  }
+
+  App ..> Auth : "/auth\n<<Path>>"
+  Auth ..> Register : "/register\n<<Path>>"
+  Auth ..> Login : "/login\n<<Path>>"
+  Auth ..> Me : "/me\n<<Path>>"
+  Auth ..> Logout : "/logout\n<<Path>>"
+
+  App ..> Spaces : "/coworkingspaces\n<<Path>>"
+  Spaces ..> Space : "/{coworkingSpaceId}\n<<Path>>"
+  Space ..> SpaceResvs : "/reservations\n<<Path>>"
+
+  App ..> Resvs : "/reservations\n<<Path>>"
+  Resvs ..> Resv : "/{reservationId}\n<<Path>>"
+
+  Register ..> UserRep : <<use>>
+  Login ..> UserRep : <<use>>
+  Me ..> UserRep : <<use>>
+  Spaces ..> SpaceRep : <<use>>
+  Space ..> SpaceRep : <<use>>
+  SpaceResvs ..> ResvRep : <<use>>
+  Resvs ..> ResvRep : <<use>>
+  Resv ..> ResvRep : <<use>>
+}
+@enduml

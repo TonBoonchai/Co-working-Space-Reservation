@@ -1,0 +1,54 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: View Reservations (User: own only / Admin: any)
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:reservations" as router
+participant "<<middleware>>\n:auth" as auth
+participant "<<controllers>>\n:reservations" as ctrl
+participant "<<model>>\n:Reservation" as model
+database "<<MongoDB>>\n:reservations" as db
+
+== GET /api/v1/reservations ==
+client -> server ++ : req.get('/api/v1/reservations')\nAuthorization: Bearer token
+server -> router ++ : app.use('/api/v1/reservations', reservations)
+router -> auth ++ : protect
+auth --> router -- : req.user
+router -> ctrl ++ : getReservations
+alt req.user.role is admin
+  ctrl -> model ++ : find({}).populate('coworkingSpace')\n.populate('user')
+else general user
+  ctrl -> model : find({user: req.user.id})\n.populate('coworkingSpace')
+end
+model -> db ++ : ReservationSchema
+db --> model -- : reservations
+model --> ctrl -- : reservations
+ctrl --> client : 200 {success:true, count, data: reservations}
+deactivate ctrl
+deactivate router
+deactivate server
+
+== GET /api/v1/reservations/:id ==
+client -> server ++ : req.get('/api/v1/reservations/:id')\nAuthorization: Bearer token
+server -> router ++ : app.use('/api/v1/reservations', reservations)
+router -> auth ++ : protect
+auth --> router -- : req.user
+router -> ctrl ++ : getReservation
+ctrl -> model ++ : findById(id)
+model -> db ++ : ReservationSchema
+db --> model -- : reservation
+model --> ctrl -- : reservation
+alt not found
+  ctrl --> client : 404 No reservation with the id
+else not the owner and not admin
+  ctrl --> client : 401 User ... is not authorized\nto view this reservation
+else owner or admin
+  ctrl -> model ++ : populate(coworkingSpace, user)
+  model --> ctrl -- : reservation
+  ctrl --> client : 200 {success:true, data: reservation}
+end
+deactivate ctrl
+deactivate router
+deactivate server
+@enduml

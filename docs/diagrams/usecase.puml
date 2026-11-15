@@ -1,0 +1,43 @@
+@startuml
+title Co-working Space Reservation - Use Case Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FFF2CC
+  BorderColor #B7950B
+}
+skinparam actorBorderColor #333333
+
+actor "User" as user
+actor "Admin" as admin
+
+rectangle "Co-working Space Reservation System" {
+  usecase "Register\n(name, Thai tel,\nemail, password)" as register
+  usecase "Log in" as login
+  usecase "Log out" as logout
+  usecase "View\nCo-working Spaces" as viewSpaces
+  usecase "Manage Own\nReservations\n(create up to 3, view,\nedit, delete)" as manageOwn
+  usecase "Manage Any\nReservation\n(view, edit, delete)" as manageAny
+  usecase "Manage\nCo-working Spaces" as manageSpaces
+}
+
+user -- register
+user -- login
+user -- logout
+user -- viewSpaces
+user -- manageOwn
+
+register -- admin
+login -- admin
+logout -- admin
+manageAny -- admin
+manageSpaces -- admin
+
+note right of manageOwn
+  A reservation must:
+  - start in the future
+  - end after it starts, on the same day
+  - fit the space's open-close time
+  A user may hold at most 3 (admin: no limit)
+end note
+@enduml

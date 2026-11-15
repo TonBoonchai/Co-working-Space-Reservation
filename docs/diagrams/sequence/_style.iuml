@@ -1,0 +1,18 @@
+' Shared look for all sequence diagrams (course VacQ style)
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 300
+skinparam sequence {
+  ParticipantBackgroundColor #B6CFD2
+  ParticipantBorderColor #7FA3A8
+  DatabaseBackgroundColor #B6CFD2
+  DatabaseBorderColor #7FA3A8
+  ActorBackgroundColor #FFF2CC
+  ActorBorderColor #B7950B
+  LifeLineBorderColor #555555
+  LifeLineBackgroundColor #D0442B
+  GroupBackgroundColor #FFF2CC
+  GroupBorderColor #D6B656
+  BoxBackgroundColor #EEF3FB
+}

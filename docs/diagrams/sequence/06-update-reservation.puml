@@ -1,0 +1,48 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: Edit Reservation (PUT /api/v1/reservations/:id)\nUser: own only / Admin: any
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:reservations" as router
+participant "<<middleware>>\n:auth" as auth
+participant "<<controllers>>\n:reservations" as ctrl
+participant "<<model>>\n:Reservation" as model
+participant "<<model>>\n:CoworkingSpace" as spaceModel
+database "<<MongoDB>>\n:reservations" as db
+database "<<MongoDB>>\n:coworkingspaces" as spaceDb
+
+client -> server ++ : req.put('/api/v1/reservations/:id')\nAuthorization: Bearer token\n{startTime?, endTime?, coworkingSpace?}
+server -> router ++ : app.use('/api/v1/reservations', reservations)
+router -> auth ++ : protect, authorize('admin', 'user')
+auth --> router -- : req.user
+router -> ctrl ++ : updateReservation
+ctrl -> model ++ : findById(id)
+model -> db ++ : ReservationSchema
+db --> model -- : reservation
+model --> ctrl -- : reservation
+alt not found
+  ctrl --> client : 404 No reservation with the id
+else not the owner and not admin
+  ctrl --> client : 401 User ... is not authorized\nto update this reservation
+else owner or admin
+  ctrl -> ctrl : merge new startTime / endTime /\ncoworkingSpace with current values\n(owner can never change)
+  ctrl -> spaceModel ++ : findById(coworkingSpaceId)
+  spaceModel -> spaceDb ++ : CoworkingSpaceSchema
+  spaceDb --> spaceModel -- : coworkingSpace
+  spaceModel --> ctrl -- : coworkingSpace
+  ctrl -> ctrl : checkReservationTime(startTime, endTime, coworkingSpace)
+  alt time not allowed
+    ctrl --> client : 400 {success:false, message: reason}
+  else time OK
+    ctrl -> model ++ : reservation.save()
+    model -> db ++ : ReservationSchema
+    db --> model -- : updated reservation
+    model --> ctrl -- : reservation
+    ctrl --> client : 200 {success:true, data: reservation}
+  end
+end
+deactivate ctrl
+deactivate router
+deactivate server
+@enduml

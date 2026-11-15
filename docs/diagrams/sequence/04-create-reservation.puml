@@ -1,0 +1,59 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: User Create Reservation\n(POST /api/v1/coworkingspaces/:coworkingSpaceId/reservations)
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:coworkingspaces" as spaceRouter
+participant "<<router>>\n:reservations" as router
+participant "<<middleware>>\n:auth" as auth
+participant "<<controllers>>\n:reservations" as ctrl
+participant "<<model>>\n:CoworkingSpace" as spaceModel
+participant "<<model>>\n:Reservation" as model
+database "<<MongoDB>>\n:coworkingspaces" as spaceDb
+database "<<MongoDB>>\n:reservations" as db
+
+client -> server ++ : req.post('/api/v1/coworkingspaces/:coworkingSpaceId/reservations')\nAuthorization: Bearer token\n{startTime, endTime}
+server -> spaceRouter ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
+spaceRouter -> router ++ : router.use('/:coworkingSpaceId/reservations', reservationRouter)
+router -> auth ++ : protect, authorize('admin', 'user')
+auth -> auth : jwt.verify(token)\nreq.user = User.findById(decoded.id)
+alt no / invalid token
+  auth --> client : 401 Not authorize to access this route
+else token OK
+  auth --> router -- : next()
+  router -> ctrl ++ : addReservation
+  ctrl -> spaceModel ++ : findById(coworkingSpaceId)
+  spaceModel -> spaceDb ++ : CoworkingSpaceSchema
+  spaceDb --> spaceModel -- : coworkingSpace
+  spaceModel --> ctrl -- : coworkingSpace
+  alt co-working space not found
+    ctrl --> client : 404 No co-working space with the id
+  else space found
+    ctrl -> ctrl : checkReservationTime(startTime, endTime, coworkingSpace)
+    alt start in the past / end not after start /\nnot the same day / outside open-close time
+      ctrl --> client : 400 {success:false, message: reason}
+    else time OK
+      opt user is not admin
+        ctrl -> model ++ : countDocuments({user: req.user.id})
+        model -> db ++ : ReservationSchema
+        db --> model -- : count
+        model --> ctrl -- : count
+      end
+      alt not admin and count >= 3
+        ctrl --> client : 400 "The user with ID ... has\nalready made 3 reservations"
+      else allowed
+        ctrl -> model ++ : create({startTime, endTime,\nuser: req.user.id, coworkingSpace})
+        model -> db ++ : ReservationSchema
+        db --> model -- : reservation
+        model --> ctrl -- : reservation
+        ctrl --> client : 201 {success:true, data: reservation}
+      end
+    end
+  end
+  deactivate ctrl
+end
+deactivate router
+deactivate spaceRouter
+deactivate server
+@enduml
