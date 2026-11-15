@@ -1,36 +1,55 @@
 const Reservation = require("../models/Reservation");
 const CoworkingSpace = require("../models/CoworkingSpace");
+const errorMessage = require("../utils/errorMessage");
+const { checkReservationTime } = require("../utils/reservationTime");
+
+// A general user can hold at most this many reservations (admins are exempt)
+const MAX_RESERVATIONS = 3;
+
+const populateSpace = {
+  path: "coworkingSpace",
+  select: "name address tel openTime closeTime",
+};
+const populateUser = { path: "user", select: "name email tel" };
+
+// Bad ids / invalid data are the client's fault (400); anything else is 500
+const sendError = (res, err, fallback) => {
+  console.log(err);
+  const clientError = ["CastError", "ValidationError"].includes(err.name);
+  return res.status(clientError ? 400 : 500).json({
+    success: false,
+    message: errorMessage(err, fallback),
+  });
+};
+
+const isOwnerOrAdmin = (reservation, user) =>
+  reservation.user.toString() === user.id || user.role === "admin";
 
 //@desc     Get all reservations
 //@route    GET /api/v1/reservations
 //@route    GET /api/v1/coworkingspaces/:coworkingSpaceId/reservations
 //@access   Private
 exports.getReservations = async (req, res, next) => {
-  let query;
-
-  if (req.user.role !== "admin") {
-    // General users can see only their reservations!
-    query = Reservation.find({ user: req.user.id }).populate({
-      path: "coworkingSpace",
-      select: "name address tel openTime closeTime",
-    });
-  } else {
-    // If you are an admin, you can see all!
-    if (req.params.coworkingSpaceId) {
-      console.log(req.params.coworkingSpaceId);
-      query = Reservation.find({ coworkingSpace: req.params.coworkingSpaceId }).populate({
-        path: "coworkingSpace",
-        select: "name address tel openTime closeTime",
-      });
-    } else {
-      query = Reservation.find().populate({
-        path: "coworkingSpace",
-        select: "name address tel openTime closeTime",
-      });
-    }
-  }
-
   try {
+    const filter = {};
+
+    if (req.params.coworkingSpaceId) {
+      filter.coworkingSpace = req.params.coworkingSpaceId;
+    }
+
+    // General users can see only their own reservations; admins see all
+    if (req.user.role !== "admin") {
+      filter.user = req.user.id;
+    }
+
+    let query = Reservation.find(filter)
+      .populate(populateSpace)
+      .sort("startTime");
+
+    if (req.user.role === "admin") {
+      query = query.populate(populateUser);
+    }
+
     const reservations = await query;
 
     res.status(200).json({
@@ -38,23 +57,17 @@ exports.getReservations = async (req, res, next) => {
       count: reservations.length,
       data: reservations,
     });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Cannot find Reservation" });
+  } catch (err) {
+    return sendError(res, err, "Cannot find Reservation");
   }
 };
 
 //@desc     Get single reservation
 //@route    GET /api/v1/reservations/:id
-//@access   Private
+//@access   Private (owner or admin)
 exports.getReservation = async (req, res, next) => {
   try {
-    const reservation = await Reservation.findById(req.params.id).populate({
-      path: "coworkingSpace",
-      select: "name address tel openTime closeTime",
-    });
+    const reservation = await Reservation.findById(req.params.id);
 
     if (!reservation) {
       return res.status(404).json({
@@ -63,15 +76,22 @@ exports.getReservation = async (req, res, next) => {
       });
     }
 
+    // Keep reservations confidential: only the owner or an admin may view
+    if (!isOwnerOrAdmin(reservation, req.user)) {
+      return res.status(401).json({
+        success: false,
+        message: `User ${req.user.id} is not authorized to view this reservation`,
+      });
+    }
+
+    await reservation.populate([populateSpace, populateUser]);
+
     res.status(200).json({
       success: true,
       data: reservation,
     });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Cannot find Reservation" });
+  } catch (err) {
+    return sendError(res, err, "Cannot find Reservation");
   }
 };
 
@@ -80,9 +100,9 @@ exports.getReservation = async (req, res, next) => {
 //@access   Private
 exports.addReservation = async (req, res, next) => {
   try {
-    req.body.coworkingSpace = req.params.coworkingSpaceId;
-
-    const coworkingSpace = await CoworkingSpace.findById(req.params.coworkingSpaceId);
+    const coworkingSpace = await CoworkingSpace.findById(
+      req.params.coworkingSpaceId,
+    );
 
     if (!coworkingSpace) {
       return res.status(404).json({
@@ -91,40 +111,50 @@ exports.addReservation = async (req, res, next) => {
       });
     }
 
-    // Add user Id to req.body
-    req.body.user = req.user.id;
-
-    // Check for existed reservation
-    const existedReservations = await Reservation.find({ user: req.user.id });
-
-    // If the user is not an admin, they can only create 3 reservations.
-    if (existedReservations.length >= 3 && req.user.role !== "admin") {
-      return res.status(400).json({
-        success: false,
-        message: `The user with ID ${req.user.id} has already made 3 reservations`,
+    // If the user is not an admin, they can only create 3 reservations
+    if (req.user.role !== "admin") {
+      const existedReservations = await Reservation.countDocuments({
+        user: req.user.id,
       });
+
+      if (existedReservations >= MAX_RESERVATIONS) {
+        return res.status(400).json({
+          success: false,
+          message: `The user with ID ${req.user.id} has already made ${MAX_RESERVATIONS} reservations`,
+        });
+      }
     }
 
-    const reservation = await Reservation.create(req.body);
+    // Same day, inside opening hours, in the future, end after start
+    const { startTime, endTime } = req.body;
+    const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
+
+    if (timeError) {
+      return res.status(400).json({ success: false, message: timeError });
+    }
+
+    const reservation = await Reservation.create({
+      startTime,
+      endTime,
+      user: req.user.id,
+      coworkingSpace: coworkingSpace._id,
+    });
 
     res.status(201).json({
       success: true,
       data: reservation,
     });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Cannot create Reservation" });
+  } catch (err) {
+    return sendError(res, err, "Cannot create Reservation");
   }
 };
 
 //@desc     Update reservation
 //@route    PUT /api/v1/reservations/:id
-//@access   Private
+//@access   Private (owner or admin)
 exports.updateReservation = async (req, res, next) => {
   try {
-    let reservation = await Reservation.findById(req.params.id);
+    const reservation = await Reservation.findById(req.params.id);
 
     if (!reservation) {
       return res.status(404).json({
@@ -134,36 +164,52 @@ exports.updateReservation = async (req, res, next) => {
     }
 
     // Make sure user is the reservation owner
-    if (
-      reservation.user.toString() !== req.user.id &&
-      req.user.role !== "admin"
-    ) {
+    if (!isOwnerOrAdmin(reservation, req.user)) {
       return res.status(401).json({
         success: false,
         message: `User ${req.user.id} is not authorized to update this reservation`,
       });
     }
 
-    reservation = await Reservation.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    // Only the time and the co-working space can change (never the owner)
+    const startTime = req.body.startTime ?? reservation.startTime;
+    const endTime = req.body.endTime ?? reservation.endTime;
+    const coworkingSpaceId =
+      req.body.coworkingSpace ?? reservation.coworkingSpace;
+
+    const coworkingSpace = await CoworkingSpace.findById(coworkingSpaceId);
+
+    if (!coworkingSpace) {
+      return res.status(404).json({
+        success: false,
+        message: `No co-working space with the id of ${coworkingSpaceId}`,
+      });
+    }
+
+    const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
+
+    if (timeError) {
+      return res.status(400).json({ success: false, message: timeError });
+    }
+
+    reservation.startTime = startTime;
+    reservation.endTime = endTime;
+    reservation.coworkingSpace = coworkingSpace._id;
+    await reservation.save();
+    await reservation.populate(populateSpace);
 
     res.status(200).json({
       success: true,
       data: reservation,
     });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Cannot update Reservation" });
+  } catch (err) {
+    return sendError(res, err, "Cannot update Reservation");
   }
 };
 
 //@desc     Delete reservation
 //@route    DELETE /api/v1/reservations/:id
-//@access   Private
+//@access   Private (owner or admin)
 exports.deleteReservation = async (req, res, next) => {
   try {
     const reservation = await Reservation.findById(req.params.id);
@@ -176,10 +222,7 @@ exports.deleteReservation = async (req, res, next) => {
     }
 
     // Make sure user is the reservation owner
-    if (
-      reservation.user.toString() !== req.user.id &&
-      req.user.role !== "admin"
-    ) {
+    if (!isOwnerOrAdmin(reservation, req.user)) {
       return res.status(401).json({
         success: false,
         message: `User ${req.user.id} is not authorized to delete this reservation`,
@@ -192,10 +235,7 @@ exports.deleteReservation = async (req, res, next) => {
       success: true,
       data: {},
     });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Cannot delete Reservation" });
+  } catch (err) {
+    return sendError(res, err, "Cannot delete Reservation");
   }
 };
