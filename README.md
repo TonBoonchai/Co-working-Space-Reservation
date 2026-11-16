@@ -138,6 +138,10 @@ The review folders make a reservation that ends a few seconds after it starts, a
 
 `npm run test:race` sends 20 pairs of requests at the same time. Each pair is one reservation and one closure for the same space and time. Exactly one request of each pair must succeed. The script makes its own admin and space, and deletes both at the end, also when the test fails.
 
+### Extra requirements demo
+
+[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video. It has one folder for each extra requirement, in the order of [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md). Send its requests from top to bottom with the same environment. Each request name starts with its actor (`[Admin]`, `[Alice]`, `[Bob]` or `[Public]`), and the collection keeps one token for each actor. To get the emails in a real inbox, set the collection variable `inbox` (for example `you@gmail.com`) before `0. Setup`. Each user then gets a plus address of that inbox.
+
 ### Presentation steps → Postman folders
 
 | Step | Function check | Folder |
