@@ -140,16 +140,16 @@ The review folders make a reservation that ends a few seconds after it starts, a
 
 ### Extra requirements demo
 
-[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video. It has one folder for each extra requirement, in the order of [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md). Each request name starts with its actor (`[Admin]`, `[Alice]`, `[Bob]` or `[Public]`), and the collection keeps one token for each actor.
+[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video. It has one folder for each extra requirement, in the order of [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md). Each request name starts with a 4-digit number in the run order, such as `0008 Alice Reviews`. Most names then give the actor: Admin, Alice or Bob. A name with no actor is a public request. The collection keeps one token for each actor.
 
 To run the demo:
 
-1. Run `npm run demo:reset`. The script connects to MongoDB directly ([`tests/demo-reset.js`](tests/demo-reset.js)). It deletes the demo users and the spaces whose name starts with `Demo Co-Work Hub`, with all their reservations, closures, reviews and waitlist entries.
-2. Send the requests from top to bottom with the same environment. `0. Setup` registers the admin, Alice and Bob, and creates the space `Demo Co-Work Hub`.
+1. Run `npm run demo:reset`. The script connects to MongoDB directly ([`tests/demo-reset.js`](tests/demo-reset.js)). It deletes the users named `Demo Admin`, `Demo Alice` and `Demo Bob`, and the spaces whose name starts with `Demo Co-Work Hub`, with all their reservations, closures, reviews and waitlist entries.
+2. Send the requests from top to bottom with the same environment. `0. Setup` registers the 3 demo users and creates the space `Demo Co-Work Hub`.
 
 Run the reset again before each run. Without it, `0. Setup` fails because the emails are already registered.
 
-The demo emails are `demo-admin@coworking.test`, `demo-alice@coworking.test` and `demo-bob@coworking.test`, where real email cannot arrive. To get the emails in real inboxes, set the collection variables `adminEmail`, `aliceEmail` and `bobEmail` to real addresses. Also set `DEMO_ADMIN_EMAIL`, `DEMO_ALICE_EMAIL` and `DEMO_BOB_EMAIL` in `config/config.env` to the same addresses. The reset deletes the users with these addresses, so do not use the address of an account that you want to keep.
+The demo emails are `demo-admin@coworking.test`, `demo-alice@coworking.test` and `demo-bob@coworking.test`, where real email cannot arrive. To get the emails in real inboxes, set the collection variables `adminEmail`, `aliceEmail` and `bobEmail` to real addresses. The reset finds the demo users by name, not by email, so it needs no email settings. A real address must not belong to a different account, because the reset does not delete that account.
 
 ### Presentation steps → Postman folders
 

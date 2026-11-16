@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Extra Requirements Demo",
-    "description": "A short, linear walk through the extra requirements, for a demo video. Send the requests from top to bottom, or run the collection with the Collection Runner. Use the \"Co-working Space Reservation - Local\" environment for {{URL}}.\n\nRun `npm run demo:reset` before each run. The reset deletes the demo users and the demo space, so \"0. Setup\" can register them again.\n\nEach request name starts with the actor: [Admin], [Alice], [Bob] or [Public]. The collection keeps one token for each actor, so you never log in or log out between requests.\n\nTo show the emails in real inboxes, set the collection variables adminEmail, aliceEmail and bobEmail to real addresses. Set DEMO_ADMIN_EMAIL, DEMO_ALICE_EMAIL and DEMO_BOB_EMAIL in config/config.env to the same addresses, so the reset deletes these users. The server must have SMTP_HOST set to send the emails. Without it, the server console shows each email.\n\n\"1.1\" makes a reservation that ends a few seconds from now. A reservation must start and end on the same day, so do not record within a few seconds of midnight Bangkok time.",
+    "description": "A short, linear walk through the extra requirements, for a demo video. Send the requests from top to bottom, or run the collection with the Collection Runner. Use the \"Co-working Space Reservation - Local\" environment for {{URL}}.\n\nRun `npm run demo:reset` before each run. The reset deletes the users named Demo Admin, Demo Alice and Demo Bob, and the demo space, so \"0. Setup\" can register them again.\n\nEach request name starts with a 4-digit number in the run order. Most names then give the actor: Admin, Alice or Bob. A name with no actor is a public request. The collection keeps one token for each actor, so you never log in or log out between requests.\n\nTo show the emails in real inboxes, set the collection variables adminEmail, aliceEmail and bobEmail to real addresses. The server must have SMTP_HOST set to send the emails. Without it, the server console shows each email.\n\n\"1.1\" makes a reservation that ends a few seconds from now. A reservation must start and end on the same day, so do not record within a few seconds of midnight Bangkok time.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -29,7 +29,7 @@
       "name": "0. Setup",
       "item": [
         {
-          "name": "[Public] Register Admin",
+          "name": "0001 Admin Registers",
           "event": [
             {
               "listen": "prerequest",
@@ -78,7 +78,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Admin Ton\",\n  \"tel\": \"02-218-6000\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"admin1234\",\n  \"role\": \"admin\"\n}",
+              "raw": "{\n  \"name\": \"Demo Admin\",\n  \"tel\": \"02-218-6000\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"admin1234\",\n  \"role\": \"admin\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -89,7 +89,7 @@
           "response": []
         },
         {
-          "name": "[Public] Register Alice",
+          "name": "0002 Alice Registers",
           "event": [
             {
               "listen": "test",
@@ -127,7 +127,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Alice\",\n  \"tel\": \"081-234-5678\",\n  \"email\": \"{{aliceEmail}}\",\n  \"password\": \"user1234\"\n}",
+              "raw": "{\n  \"name\": \"Demo Alice\",\n  \"tel\": \"081-234-5678\",\n  \"email\": \"{{aliceEmail}}\",\n  \"password\": \"user1234\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -138,7 +138,7 @@
           "response": []
         },
         {
-          "name": "[Public] Register Bob",
+          "name": "0003 Bob Registers",
           "event": [
             {
               "listen": "test",
@@ -176,7 +176,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Bob\",\n  \"tel\": \"089-876-5432\",\n  \"email\": \"{{bobEmail}}\",\n  \"password\": \"user1234\"\n}",
+              "raw": "{\n  \"name\": \"Demo Bob\",\n  \"tel\": \"089-876-5432\",\n  \"email\": \"{{bobEmail}}\",\n  \"password\": \"user1234\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -187,7 +187,7 @@
           "response": []
         },
         {
-          "name": "[Admin] Create Co-working Space",
+          "name": "0004 Admin Creates Space",
           "event": [
             {
               "listen": "test",
@@ -251,7 +251,7 @@
           "name": "1.1 Rate 1-5 and review only after own reservation ends, once per reservation",
           "item": [
             {
-              "name": "[Alice] Create Reservation That Ends in a Few Seconds",
+              "name": "0005 Alice Makes Short Reservation",
               "event": [
                 {
                   "listen": "prerequest",
@@ -318,7 +318,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Review Before the Reservation Ends (Rejected)",
+              "name": "0006 Alice Reviews Too Early",
               "event": [
                 {
                   "listen": "test",
@@ -375,7 +375,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Review With Rating 6 (Rejected)",
+              "name": "0007 Alice Rates 6",
               "event": [
                 {
                   "listen": "prerequest",
@@ -443,7 +443,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Review Own Ended Reservation",
+              "name": "0008 Alice Reviews",
               "event": [
                 {
                   "listen": "test",
@@ -500,7 +500,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Review the Same Reservation Again (Rejected)",
+              "name": "0009 Alice Reviews Again",
               "event": [
                 {
                   "listen": "test",
@@ -557,7 +557,7 @@
               "response": []
             },
             {
-              "name": "[Bob] Review Alice's Reservation (Rejected)",
+              "name": "0010 Bob Reviews Alice's",
               "event": [
                 {
                   "listen": "test",
@@ -618,7 +618,7 @@
           "name": "1.2 Show average rating and review count of each space",
           "item": [
             {
-              "name": "[Public] Get Co-working Space",
+              "name": "0011 Get Space Rating",
               "event": [
                 {
                   "listen": "test",
@@ -662,7 +662,7 @@
           "name": "1.3 User views reviews of any space",
           "item": [
             {
-              "name": "[Bob] Get Reviews of the Space",
+              "name": "0012 Bob Gets Reviews",
               "event": [
                 {
                   "listen": "test",
@@ -710,7 +710,7 @@
           "name": "1.4 Admin views and deletes any review",
           "item": [
             {
-              "name": "[Admin] Get All Reviews",
+              "name": "0013 Admin Gets Reviews",
               "event": [
                 {
                   "listen": "test",
@@ -751,7 +751,7 @@
               "response": []
             },
             {
-              "name": "[Bob] Delete Review (Rejected, Not Admin)",
+              "name": "0014 Bob Deletes Review",
               "event": [
                 {
                   "listen": "test",
@@ -792,7 +792,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Delete Review",
+              "name": "0015 Admin Deletes Review",
               "event": [
                 {
                   "listen": "test",
@@ -833,7 +833,7 @@
               "response": []
             },
             {
-              "name": "[Public] Get Co-working Space After Delete",
+              "name": "0016 Rating After Delete",
               "event": [
                 {
                   "listen": "test",
@@ -882,7 +882,7 @@
           "name": "2.1 Admin creates, reads, updates and deletes closure periods",
           "item": [
             {
-              "name": "[Admin] Create Closure",
+              "name": "0017 Admin Creates Closure",
               "event": [
                 {
                   "listen": "test",
@@ -939,7 +939,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Get Closures of the Space",
+              "name": "0018 Admin Gets Closures",
               "event": [
                 {
                   "listen": "test",
@@ -982,7 +982,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Update Closure",
+              "name": "0019 Admin Updates Closure",
               "event": [
                 {
                   "listen": "test",
@@ -1038,7 +1038,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Delete Closure",
+              "name": "0020 Admin Deletes Closure",
               "event": [
                 {
                   "listen": "test",
@@ -1079,7 +1079,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Get Closures After Delete",
+              "name": "0021 Admin Rechecks Closures",
               "event": [
                 {
                   "listen": "test",
@@ -1127,7 +1127,7 @@
           "name": "2.2 Reject new or edited reservations that overlap a closure",
           "item": [
             {
-              "name": "[Admin] Create Closure",
+              "name": "0022 Admin Creates Closure",
               "event": [
                 {
                   "listen": "test",
@@ -1183,7 +1183,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Create Reservation Inside Closure (Rejected)",
+              "name": "0023 Alice Reserves in Closure",
               "event": [
                 {
                   "listen": "test",
@@ -1240,7 +1240,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Create Reservation After Closure",
+              "name": "0024 Alice Reserves After Closure",
               "event": [
                 {
                   "listen": "test",
@@ -1297,7 +1297,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Edit Reservation Into Closure (Rejected)",
+              "name": "0025 Alice Edits Into Closure",
               "event": [
                 {
                   "listen": "test",
@@ -1358,7 +1358,7 @@
           "name": "2.3 Reject new closures that overlap existing reservations",
           "item": [
             {
-              "name": "[Admin] Create Closure Over Alice's Reservation (Rejected)",
+              "name": "0026 Admin Closes Over Alice",
               "event": [
                 {
                   "listen": "test",
@@ -1420,7 +1420,7 @@
           "name": "2.4 Admin specifies space capacity",
           "item": [
             {
-              "name": "[Admin] Set Capacity to 1",
+              "name": "0027 Admin Sets Capacity 1",
               "event": [
                 {
                   "listen": "test",
@@ -1481,7 +1481,7 @@
           "name": "2.5 Reject new reservations when the space is full",
           "item": [
             {
-              "name": "[Bob] Create Reservation at Alice's Time (Rejected, Full)",
+              "name": "0028 Bob Reserves Full Slot",
               "event": [
                 {
                   "listen": "test",
@@ -1544,7 +1544,7 @@
           "name": "2.6 Admin force-closes the space (cancels reservations in the period)",
           "item": [
             {
-              "name": "[Admin] Force Closure Over Alice's Reservation",
+              "name": "0029 Admin Force-Closes",
               "event": [
                 {
                   "listen": "test",
@@ -1601,7 +1601,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Get Canceled Reservation (Not Found)",
+              "name": "0030 Alice Gets Canceled Reservation",
               "event": [
                 {
                   "listen": "test",
@@ -1652,7 +1652,7 @@
           "name": "3.1 Email the user when a closure cancels their reservation",
           "item": [
             {
-              "name": "[Alice] Create Reservation",
+              "name": "0031 Alice Reserves",
               "event": [
                 {
                   "listen": "test",
@@ -1708,7 +1708,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Force Closure Over Alice's Reservation",
+              "name": "0032 Admin Force-Closes",
               "event": [
                 {
                   "listen": "test",
@@ -1771,7 +1771,7 @@
           "name": "3.2 Email the user when the admin edits or deletes their reservation",
           "item": [
             {
-              "name": "[Alice] Create Reservation",
+              "name": "0033 Alice Reserves",
               "event": [
                 {
                   "listen": "test",
@@ -1828,7 +1828,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Edit Alice's Reservation",
+              "name": "0034 Admin Edits Alice's",
               "event": [
                 {
                   "listen": "test",
@@ -1883,7 +1883,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Delete Alice's Reservation",
+              "name": "0035 Admin Deletes Alice's",
               "event": [
                 {
                   "listen": "test",
@@ -1930,7 +1930,7 @@
           "name": "3.3 Email the user when the waitlist gives them a reservation",
           "item": [
             {
-              "name": "[Bob] Create Reservation (Fills the Space)",
+              "name": "0036 Bob Fills Space",
               "event": [
                 {
                   "listen": "test",
@@ -1987,7 +1987,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Join Waitlist",
+              "name": "0037 Alice Joins Waitlist",
               "event": [
                 {
                   "listen": "test",
@@ -2043,7 +2043,7 @@
               "response": []
             },
             {
-              "name": "[Bob] Delete Own Reservation",
+              "name": "0038 Bob Cancels",
               "event": [
                 {
                   "listen": "test",
@@ -2095,7 +2095,7 @@
           "name": "4.1 User joins the waitlist when the space is full",
           "item": [
             {
-              "name": "[Bob] Join Waitlist When Not Full (Rejected)",
+              "name": "0039 Bob Waitlists Free Slot",
               "event": [
                 {
                   "listen": "test",
@@ -2152,7 +2152,7 @@
               "response": []
             },
             {
-              "name": "[Admin] Create Reservation (Fills the Space)",
+              "name": "0040 Admin Fills Space",
               "event": [
                 {
                   "listen": "test",
@@ -2209,7 +2209,7 @@
               "response": []
             },
             {
-              "name": "[Bob] Join Waitlist When Full",
+              "name": "0041 Bob Joins Waitlist",
               "event": [
                 {
                   "listen": "test",
@@ -2270,7 +2270,7 @@
           "name": "4.2 First user on the waitlist gets the canceled reservation",
           "item": [
             {
-              "name": "[Admin] Delete Own Reservation",
+              "name": "0042 Admin Cancels",
               "event": [
                 {
                   "listen": "test",
@@ -2311,7 +2311,7 @@
               "response": []
             },
             {
-              "name": "[Bob] Get My Reservations",
+              "name": "0043 Bob Gets Reservations",
               "event": [
                 {
                   "listen": "test",
@@ -2361,7 +2361,7 @@
           "name": "4.3 User views and leaves their waitlist entries",
           "item": [
             {
-              "name": "[Alice] Join Waitlist When Full",
+              "name": "0044 Alice Joins Waitlist",
               "event": [
                 {
                   "listen": "test",
@@ -2418,7 +2418,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Get My Waitlist",
+              "name": "0045 Alice Gets Waitlist",
               "event": [
                 {
                   "listen": "test",
@@ -2459,7 +2459,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Leave Waitlist",
+              "name": "0046 Alice Leaves Waitlist",
               "event": [
                 {
                   "listen": "test",
@@ -2500,7 +2500,7 @@
               "response": []
             },
             {
-              "name": "[Alice] Get My Waitlist After Leave",
+              "name": "0047 Alice Gets Waitlist",
               "event": [
                 {
                   "listen": "test",
@@ -2549,7 +2549,7 @@
       "name": "5. Cleanup",
       "item": [
         {
-          "name": "[Admin] Delete Co-working Space",
+          "name": "0048 Admin Deletes Space",
           "event": [
             {
               "listen": "test",

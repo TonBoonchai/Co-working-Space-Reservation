@@ -5,14 +5,13 @@
 // Usage: `npm run demo:reset`. The server does not have to run.
 //
 // The script deletes:
-// - the users with the demo emails, and their reservations, reviews and
+// - the users named in DEMO_USER_NAMES, and their reservations, reviews and
 //   waitlist entries
 // - the spaces whose name starts with DEMO_SPACE_NAME, and their reservations,
 //   closures, reviews and waitlist entries
 //
-// The demo emails come from DEMO_ADMIN_EMAIL, DEMO_ALICE_EMAIL and
-// DEMO_BOB_EMAIL in config/config.env. They must be the same as the collection
-// variables adminEmail, aliceEmail and bobEmail.
+// The script finds the demo users by name, not by email. Thus the emails stay
+// only in the collection variables adminEmail, aliceEmail and bobEmail.
 
 const path = require("path");
 const dotenv = require("dotenv");
@@ -28,21 +27,20 @@ const WaitlistEntry = require("../models/WaitlistEntry");
 // deletes the "Demo Co-Work Hub #<runId>" spaces of older collection versions.
 const DEMO_SPACE_NAME = "Demo Co-Work Hub";
 
+// Must be the same as the user names in the "0. Setup" register requests
+const DEMO_USER_NAMES = ["Demo Admin", "Demo Alice", "Demo Bob"];
+
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const main = async () => {
   dotenv.config({ path: path.join(__dirname, "../config/config.env"), quiet: true });
 
-  const emails = [
-    process.env.DEMO_ADMIN_EMAIL || "demo-admin@coworking.test",
-    process.env.DEMO_ALICE_EMAIL || "demo-alice@coworking.test",
-    process.env.DEMO_BOB_EMAIL || "demo-bob@coworking.test",
-  ].map((e) => e.trim());
-
   await mongoose.connect(process.env.MONGO_URI);
 
   try {
-    const users = await User.find({ email: { $in: emails } }).select("_id");
+    const users = await User.find({ name: { $in: DEMO_USER_NAMES } }).select(
+      "email",
+    );
     const userIds = users.map((u) => u._id);
     const spaces = await CoworkingSpace.find({
       name: { $regex: "^" + escapeRegex(DEMO_SPACE_NAME) },
@@ -68,7 +66,9 @@ const main = async () => {
     removed.users = (await User.deleteMany({ _id: { $in: userIds } }))
       .deletedCount;
 
-    console.log(`Demo emails: ${emails.join(", ")}`);
+    if (users.length) {
+      console.log(`Demo users: ${users.map((u) => u.email).join(", ")}`);
+    }
     console.log(
       `Demo reset: removed ${removed.users} users, ${removed.spaces} spaces, ` +
         `${removed.reservations} reservations, ${removed.closures} closures, ` +
