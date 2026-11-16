@@ -36,7 +36,8 @@
                   "pm.environment.set(\"day3\", bkkDay(3));",
                   "pm.environment.set(\"day4\", bkkDay(4));",
                   "pm.environment.set(\"adminEmail\", \"admin\" + runId + \"@coworking.test\");",
-                  "pm.environment.set(\"userEmail\", \"user\" + runId + \"@coworking.test\");"
+                  "pm.environment.set(\"userEmail\", \"user\" + runId + \"@coworking.test\");",
+                  "pm.environment.set(\"extraSpaceIds\", \"[]\");"
                 ]
               }
             },
@@ -3088,6 +3089,230 @@
           }
         },
         {
+          "name": "Create Space - Hourly Rate Is Null",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Please add an hourly rate (THB per hour)\");",
+                  "});",
+                  "// A space made by mistake goes to the teardown in tests/api.js",
+                  "if (pm.response.code === 201) {",
+                  "  const ids = JSON.parse(pm.environment.get(\"extraSpaceIds\") || \"[]\");",
+                  "  ids.push(pm.response.json().data._id);",
+                  "  pm.environment.set(\"extraSpaceIds\", JSON.stringify(ids));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rate Check Space #{{runId}}\",\n  \"address\": \"1 Rama IV Rd, Bang Rak, Bangkok 10500\",\n  \"tel\": \"02-111-2222\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\",\n  \"hourlyRate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Space - Hourly Rate Is Blank",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Please add an hourly rate (THB per hour)\");",
+                  "});",
+                  "// A space made by mistake goes to the teardown in tests/api.js",
+                  "if (pm.response.code === 201) {",
+                  "  const ids = JSON.parse(pm.environment.get(\"extraSpaceIds\") || \"[]\");",
+                  "  ids.push(pm.response.json().data._id);",
+                  "  pm.environment.set(\"extraSpaceIds\", JSON.stringify(ids));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces"
+              ]
+            },
+            "description": "A blank string is no rate. It is not 0.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rate Check Space #{{runId}}\",\n  \"address\": \"1 Rama IV Rd, Bang Rak, Bangkok 10500\",\n  \"tel\": \"02-111-2222\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\",\n  \"hourlyRate\": \"  \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Space - Hourly Rate Is a Boolean",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Hourly rate must be a number (THB per hour)\");",
+                  "});",
+                  "// A space made by mistake goes to the teardown in tests/api.js",
+                  "if (pm.response.code === 201) {",
+                  "  const ids = JSON.parse(pm.environment.get(\"extraSpaceIds\") || \"[]\");",
+                  "  ids.push(pm.response.json().data._id);",
+                  "  pm.environment.set(\"extraSpaceIds\", JSON.stringify(ids));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces"
+              ]
+            },
+            "description": "false must not become 0 (a free space).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rate Check Space #{{runId}}\",\n  \"address\": \"1 Rama IV Rd, Bang Rak, Bangkok 10500\",\n  \"tel\": \"02-111-2222\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\",\n  \"hourlyRate\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Space - Hourly Rate Too Large",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Hourly rate can not be more than 9007199254740991 THB per hour\");",
+                  "});",
+                  "// A space made by mistake goes to the teardown in tests/api.js",
+                  "if (pm.response.code === 201) {",
+                  "  const ids = JSON.parse(pm.environment.get(\"extraSpaceIds\") || \"[]\");",
+                  "  ids.push(pm.response.json().data._id);",
+                  "  pm.environment.set(\"extraSpaceIds\", JSON.stringify(ids));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces"
+              ]
+            },
+            "description": "Above Number.MAX_SAFE_INTEGER, JavaScript can not store every whole number exactly.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rate Check Space #{{runId}}\",\n  \"address\": \"1 Rama IV Rd, Bang Rak, Bangkok 10500\",\n  \"tel\": \"02-111-2222\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\",\n  \"hourlyRate\": 1e100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
           "name": "Update Hourly Rate (Admin)",
           "event": [
             {
@@ -3136,6 +3361,195 @@
                 }
               }
             }
+          }
+        },
+        {
+          "name": "Update - Negative Hourly Rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Hourly rate can not be less than 0 THB per hour\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hourlyRate\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update - Hourly Rate Is a Boolean",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Hourly rate must be a number (THB per hour)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "false must not make the space free.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hourlyRate\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update - Hourly Rate Is Null",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Please add an hourly rate (THB per hour)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "An update can not remove the rate.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hourlyRate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Space A - Hourly Rate Not Changed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Hourly rate is still 180 THB\", function () {",
+                  "  pm.expect(pm.response.json().data.hourlyRate).to.eql(180);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "The failed updates must not change the rate."
           }
         },
         {
@@ -3326,7 +3740,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces?hourlyRate=0&limit=1000",
+              "raw": "{{URL}}/api/v1/coworkingspaces?hourlyRate=0&_id[in]={{spaceAId}}&_id[in]={{spaceBId}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3341,12 +3755,16 @@
                   "value": "0"
                 },
                 {
-                  "key": "limit",
-                  "value": "1000"
+                  "key": "_id[in]",
+                  "value": "{{spaceAId}}"
+                },
+                {
+                  "key": "_id[in]",
+                  "value": "{{spaceBId}}"
                 }
               ]
             },
-            "description": "No token. Everyone can filter spaces by rate.",
+            "description": "No token. Everyone can filter spaces by rate. The _id filter keeps other data in the database out of the result.",
             "auth": {
               "type": "noauth"
             }
@@ -3422,6 +3840,64 @@
               ]
             },
             "description": ""
+          }
+        },
+        {
+          "name": "Delete Stray Rate Check Spaces",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Delete the spaces that folder 14 made by mistake (normally none)",
+                  "const ids = JSON.parse(pm.environment.get(\"extraSpaceIds\") || \"[]\");",
+                  "ids.forEach((id) => {",
+                  "  pm.sendRequest({",
+                  "    url: pm.environment.get(\"URL\") + \"/api/v1/coworkingspaces/\" + id,",
+                  "    method: \"DELETE\",",
+                  "    header: { Authorization: \"Bearer \" + pm.environment.get(\"TOKEN\") },",
+                  "  });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"No Rate Check Space of this run is left\", function () {",
+                  "  pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces?name=Rate%20Check%20Space%20%23{{runId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Rate%20Check%20Space%20%23{{runId}}"
+                }
+              ]
+            },
+            "description": "The pre-request script deletes the spaces in extraSpaceIds. This request then checks that none is left."
           }
         },
         {
