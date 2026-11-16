@@ -5,6 +5,7 @@ const {
   createCoworkingSpace,
   updateCoworkingSpace,
   deleteCoworkingSpace,
+  calculateReservationPrice,
 } = require("../controllers/coworkingspaces");
 
 // Include other resource routers
@@ -28,5 +29,6 @@ router
   .get(getCoworkingSpace)
   .put(protect, authorize("admin"), updateCoworkingSpace)
   .delete(protect, authorize("admin"), deleteCoworkingSpace);
+router.route("/:id/price").post(calculateReservationPrice);
 
 module.exports = router;

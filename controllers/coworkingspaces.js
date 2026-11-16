@@ -2,6 +2,8 @@ const CoworkingSpace = require("../models/CoworkingSpace");
 const Reservation = require("../models/Reservation");
 const Closure = require("../models/Closure");
 const errorMessage = require("../utils/errorMessage");
+const { checkReservationTime } = require("../utils/reservationTime");
+const { calculatePrice } = require("../utils/price");
 
 //@desc     Get all co-working spaces
 //@route    GET /api/v1/coworkingspaces
@@ -176,6 +178,63 @@ exports.deleteCoworkingSpace = async (req, res, next) => {
     res.status(400).json({
       success: false,
       message: errorMessage(err, "Cannot delete co-working space"),
+    });
+  }
+};
+
+//@desc     Calculate the total price of a reservation from its duration
+//@route    POST /api/v1/coworkingspaces/:id/price
+//@access   Public
+exports.calculateReservationPrice = async (req, res, next) => {
+  try {
+    const coworkingSpace = await CoworkingSpace.findById(req.params.id);
+
+    if (!coworkingSpace) {
+      return res.status(404).json({
+        success: false,
+        message: `No co-working space with the id of ${req.params.id}`,
+      });
+    }
+
+    // A space from before the hourly rate field has no rate
+    if (coworkingSpace.hourlyRate == null) {
+      return res.status(400).json({
+        success: false,
+        message: `${coworkingSpace.name} has no hourly rate`,
+      });
+    }
+
+    // The same time rules as a new reservation.
+    // (A request with no body has req.body undefined in Express 5)
+    const { startTime, endTime } = req.body ?? {};
+    const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
+
+    if (timeError) {
+      return res.status(400).json({ success: false, message: timeError });
+    }
+
+    const { durationMinutes, totalPrice } = calculatePrice(
+      coworkingSpace.hourlyRate,
+      startTime,
+      endTime,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        coworkingSpace: coworkingSpace._id,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        durationMinutes,
+        hourlyRate: coworkingSpace.hourlyRate,
+        totalPrice,
+        currency: "THB",
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: errorMessage(err, "Cannot calculate the price"),
     });
   }
 };
