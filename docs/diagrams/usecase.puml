@@ -17,6 +17,7 @@ rectangle "Co-working Space Reservation System" {
   usecase "Log out" as logout
   usecase "View\nCo-working Spaces" as viewSpaces
   usecase "View\nClosure Periods" as viewClosures
+  usecase "Calculate\nReservation Price" as calcPrice
   usecase "Manage Own\nReservations\n(create up to 3, view,\nedit, delete)" as manageOwn
   usecase "Manage Any\nReservation\n(view, edit, delete)" as manageAny
   usecase "Manage\nCo-working Spaces" as manageSpaces
@@ -28,6 +29,7 @@ user -- login
 user -- logout
 user -- viewSpaces
 user -- viewClosures
+user -- calcPrice
 user -- manageOwn
 
 register -- admin

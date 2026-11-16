@@ -48,6 +48,9 @@ package "Co-working Space Reservation" <<Frame>> {
     <<GET>> +getReservations(): Reservation
     <<POST>> +addReservation(): Reservation
   }
+  class "SpacePrice" as SpacePrice <<Resource>> {
+    <<POST>> +calculateReservationPrice(): Price
+  }
   class "SpaceClosures" as SpaceClosures <<Resource>> {
     <<GET>> +getClosures(): Closure
     <<POST>> +addClosure(): Closure
@@ -98,6 +101,15 @@ package "Co-working Space Reservation" <<Frame>> {
     -coworkingSpace
     -createdAt
   }
+  class "Price" as PriceRep <<Representation>> {
+    -coworkingSpace
+    -startTime
+    -endTime
+    -durationMinutes
+    -hourlyRate
+    -totalPrice
+    -currency
+  }
   class "Closure" as ClosureRep <<Representation>> {
     -coworkingSpace
     -startTime
@@ -116,6 +128,7 @@ package "Co-working Space Reservation" <<Frame>> {
   Spaces ..> Space : "/{coworkingSpaceId}\n<<Path>>"
   Space ..> SpaceResvs : "/reservations\n<<Path>>"
   Space ..> SpaceClosures : "/closures\n<<Path>>"
+  Space ..> SpacePrice : "/price\n<<Path>>"
 
   App ..> Resvs : "/reservations\n<<Path>>"
   Resvs ..> Resv : "/{reservationId}\n<<Path>>"
@@ -132,6 +145,7 @@ package "Co-working Space Reservation" <<Frame>> {
   Resvs ..> ResvRep : <<use>>
   Resv ..> ResvRep : <<use>>
   SpaceClosures ..> ClosureRep : <<use>>
+  SpacePrice ..> PriceRep : <<use>>
   Closures ..> ClosureRep : <<use>>
   Closure ..> ClosureRep : <<use>>
 }

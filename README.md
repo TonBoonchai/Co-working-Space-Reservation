@@ -45,6 +45,7 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | POST | `/coworkingspaces` | Admin | Create a space (`name`, `address`, `tel`, `openTime`, `closeTime`, `hourlyRate`) |
 | PUT | `/coworkingspaces/:id` | Admin | Update a space |
 | DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations and its closures |
+| POST | `/coworkingspaces/:id/price` | Public | Calculate the price of a reservation (`startTime`, `endTime`) |
 | POST | `/coworkingspaces/:coworkingSpaceId/reservations` | User/Admin | Create a reservation (`startTime`, `endTime`) |
 | GET | `/coworkingspaces/:coworkingSpaceId/reservations` | Private | Reservations at one space (own only for users) |
 | GET | `/reservations` | Private | Users: own reservations. Admin: all |
@@ -64,7 +65,7 @@ Example space body (`hourlyRate` is in THB per hour):
 { "name": "Siam Co-Work Hub", "address": "254 Phayathai Rd, Pathum Wan, Bangkok 10330", "tel": "02-123-4567", "openTime": "08:00", "closeTime": "20:00", "hourlyRate": 150 }
 ```
 
-Example reservation body (times are Bangkok time):
+Example reservation body (times are Bangkok time). The price calculation uses the same body:
 
 ```json
 { "startTime": "2026-12-01T09:00:00+07:00", "endTime": "2026-12-01T12:00:00+07:00" }
@@ -87,6 +88,7 @@ Example closure body (a closure can span many days):
   - provincial `053-123-456`
 - **Co-working space hours:** `openTime` and `closeTime` use `HH:mm` (24-hour), and the close time must be later than the open time.
 - **Hourly rate:** `hourlyRate` is the price of a space in whole Thai Baht (THB) per hour. The minimum is `0`, and `0` means a free space. The rate is required on create and on update. Only the admin can set it. Everyone can see it, and `GET /coworkingspaces?hourlyRate[lte]=200&sort=hourlyRate` filters and sorts by it. A space from before this field has no rate. A `PUT` on such a space fails until the body includes `hourlyRate`.
+- **Price:** `POST /coworkingspaces/:id/price` calculates the total price in THB of a reservation from its duration. The body is the same as a reservation body. The price is in proportion to the duration: 90 minutes at 180 THB per hour cost 270 THB. The total is rounded to 2 decimal places (satang). The same time rules as a new reservation apply. The calculation does not check closures or the limit of 3 reservations, and it does not create a reservation. A space with no rate gives a 400 error.
 
 ## Testing with Postman / Newman
 
@@ -99,7 +101,7 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 76 requests, 144 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 83 requests, 159 assertions, all passing.
 
 `npm run test:api` also deletes the admin, the user and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and user stay in the database.
 
@@ -126,6 +128,7 @@ The collection creates its own admin, user and spaces with unique names for each
 | 13 | Admin Manage Closure Periods | `13 Admin Manage Closure Periods` |
 | 13+ | Check Closure Conditions | `13+ Check Closure Conditions` |
 | 14 | Admin Set Hourly Rate | `14 Admin Set Hourly Rate` |
+| 15 | User Calculate Reservation Price | `15 User Calculate Reservation Price` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -134,7 +137,7 @@ PlantUML sources are in [`docs/diagrams/`](docs/diagrams/), and rendered PNGs ar
 
 - Use case: [`usecase.png`](docs/diagrams/png/usecase.png)
 - Class diagram (UML Profile for REST): [`class.png`](docs/diagrams/png/class.png)
-- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png)
+- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png), [calculate price](docs/diagrams/png/10-calculate-price.png)
 
 To re-render, use the PlantUML VS Code extension, or run `java -jar plantuml.jar -tpng docs/diagrams/**/*.puml`.
 
