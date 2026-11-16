@@ -55,6 +55,10 @@ package "Co-working Space Reservation" <<Frame>> {
   class "SpaceReviews" as SpaceReviews <<Resource>> {
     <<GET>> +getReviews(): Review
   }
+  class "SpaceWaitlist" as SpaceWaitlist <<Resource>> {
+    <<GET>> +getWaitlistEntries(): WaitlistEntry
+    <<POST>> +addWaitlistEntry(): WaitlistEntry
+  }
 
   ' ---------- /reservations ----------
   class "Reservations" as Resvs <<Resource>> {
@@ -87,6 +91,14 @@ package "Co-working Space Reservation" <<Frame>> {
   class "Review" as Review <<Resource>> {
     <<GET>> +getReview(): Review
     <<DELETE>> +deleteReview(): void
+  }
+
+  ' ---------- /waitlist ----------
+  class "Waitlist" as Waitlist <<Resource>> {
+    <<GET>> +getWaitlistEntries(): WaitlistEntry
+  }
+  class "WaitlistEntry" as WaitlistEntry <<Resource>> {
+    <<DELETE>> +deleteWaitlistEntry(): void
   }
 
   ' ---------- representations ----------
@@ -123,6 +135,13 @@ package "Co-working Space Reservation" <<Frame>> {
     -reason
     -createdAt
   }
+  class "WaitlistEntry" as WaitlistRep <<Representation>> {
+    -startTime
+    -endTime
+    -user
+    -coworkingSpace
+    -createdAt
+  }
   class "Review" as ReviewRep <<Representation>> {
     -rating
     -comment
@@ -143,6 +162,7 @@ package "Co-working Space Reservation" <<Frame>> {
   Space ..> SpaceResvs : "/reservations\n<<Path>>"
   Space ..> SpaceClosures : "/closures\n<<Path>>"
   Space ..> SpaceReviews : "/reviews\n<<Path>>"
+  Space ..> SpaceWaitlist : "/waitlist\n<<Path>>"
 
   App ..> Resvs : "/reservations\n<<Path>>"
   Resvs ..> Resv : "/{reservationId}\n<<Path>>"
@@ -153,6 +173,9 @@ package "Co-working Space Reservation" <<Frame>> {
 
   App ..> Reviews : "/reviews\n<<Path>>"
   Reviews ..> Review : "/{reviewId}\n<<Path>>"
+
+  App ..> Waitlist : "/waitlist\n<<Path>>"
+  Waitlist ..> WaitlistEntry : "/{waitlistEntryId}\n<<Path>>"
 
   Register ..> UserRep : <<use>>
   Login ..> UserRep : <<use>>
@@ -169,5 +192,8 @@ package "Co-working Space Reservation" <<Frame>> {
   ResvReviews ..> ReviewRep : <<use>>
   Reviews ..> ReviewRep : <<use>>
   Review ..> ReviewRep : <<use>>
+  SpaceWaitlist ..> WaitlistRep : <<use>>
+  Waitlist ..> WaitlistRep : <<use>>
+  WaitlistEntry ..> WaitlistRep : <<use>>
 }
 @enduml

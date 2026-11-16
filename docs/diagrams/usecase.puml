@@ -24,6 +24,7 @@ rectangle "Co-working Space Reservation System" {
   usecase "Manage\nCo-working Spaces" as manageSpaces
   usecase "Manage\nClosure Periods\n(create, view,\nedit, delete, force)" as manageClosures
   usecase "Manage Reviews\n(view, delete any)" as manageReviews
+  usecase "Manage Own\nWaitlist Entries\n(join when full,\nview, leave)" as waitlist
 }
 
 user -- register
@@ -34,6 +35,7 @@ user -- viewClosures
 user -- manageOwn
 user -- viewReviews
 user -- review
+user -- waitlist
 
 register -- admin
 login -- admin
@@ -56,6 +58,19 @@ note right of review
   Only after one of the user's own
   reservations at the space ends.
   One review per reservation.
+end note
+
+note right of waitlist
+  When a place opens, the first
+  entry that fits becomes a
+  reservation, and the server
+  emails its user.
+end note
+
+note left of manageAny
+  The server emails the owner
+  when an admin edits or
+  deletes their reservation.
 end note
 
 note left of manageClosures

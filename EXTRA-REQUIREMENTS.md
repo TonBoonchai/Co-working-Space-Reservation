@@ -21,3 +21,11 @@ Note: IDs are for verbal referencing only. Do not persist them anywhere. Do not 
 ## Notification Management
 
 - \[x\] NM-1 The system shall send an email to notify the user if their reservations have been canceled by closure.
+- \[x\] NM-2 The system shall send an email to the user if the admin edits or deletes their reservation.
+- \[x\] NM-3 The system shall send an email to the user when the system gives them a reservation from the waitlist.
+
+## Waitlist Management
+
+- \[x\] WM-1 The system shall allow the user to join a waitlist for a co-working space when the space is full for the requested period.
+- \[x\] WM-2 The system shall automatically give the reservation to the first user on the waitlist when a reservation in that period is canceled.
+- \[x\] WM-3 The system shall allow the user to view and leave their waitlist entries.
