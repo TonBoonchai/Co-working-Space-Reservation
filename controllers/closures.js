@@ -4,6 +4,8 @@ const Reservation = require("../models/Reservation");
 const sendError = require("../utils/sendError");
 const { overlapFilter } = require("../utils/overlap");
 const { withSpaceLock } = require("../utils/spaceLock");
+const { formatBangkok } = require("../utils/reservationTime");
+const sendEmail = require("../utils/sendEmail");
 
 const populateSpace = { path: "coworkingSpace", select: "name address" };
 
@@ -45,6 +47,64 @@ const findReservationConflict = async (
   return count === 1
     ? "1 reservation overlaps this closure period"
     : `${count} reservations overlap this closure period`;
+};
+
+// Check the optional "force" field. Returns an error message, or null.
+const checkForce = (force) =>
+  force === undefined || typeof force === "boolean"
+    ? null
+    : "Force must be true or false";
+
+// Delete the reservations that overlap the period, and return them with
+// the name and email of each owner.
+// Run it inside withSpaceLock, with the same session as the write.
+const cancelReservations = async (
+  coworkingSpaceId,
+  startTime,
+  endTime,
+  session,
+) => {
+  const canceled = await Reservation.find(
+    overlapFilter(coworkingSpaceId, new Date(startTime), new Date(endTime)),
+  )
+    .populate({ path: "user", select: "name email" })
+    .session(session);
+
+  if (canceled.length > 0) {
+    await Reservation.deleteMany({
+      _id: { $in: canceled.map((r) => r._id) },
+    }).session(session);
+  }
+
+  return canceled;
+};
+
+// Send one email to the owner of each canceled reservation.
+// Run it only after the transaction commits. The response does not wait for
+// the emails, and an email that fails does not undo the closure.
+const notifyCanceled = (canceled, spaceName, closure) => {
+  const closed =
+    `${formatBangkok(closure.startTime)} to ${formatBangkok(closure.endTime)}` +
+    (closure.reason ? ` (${closure.reason})` : "");
+
+  canceled.forEach((reservation) => {
+    const user = reservation.user;
+    if (!user?.email) return;
+
+    sendEmail({
+      to: user.email,
+      subject: `Your reservation at ${spaceName} is canceled`,
+      text:
+        `Hello ${user.name},\n\n` +
+        `Your reservation at ${spaceName} from ` +
+        `${formatBangkok(reservation.startTime)} to ` +
+        `${formatBangkok(reservation.endTime)} (Bangkok time) is canceled, ` +
+        `because the co-working space is closed from ${closed}.\n\n` +
+        `Please make a new reservation at a different time or space.\n`,
+    }).catch((err) =>
+      console.log(`Cannot send email to ${user.email}: ${err.message}`),
+    );
+  });
 };
 
 //@desc     Get all closures
@@ -112,37 +172,56 @@ exports.addClosure = async (req, res, next) => {
     }
 
     // A request with no body has req.body undefined in Express 5
-    const { startTime, endTime, reason } = req.body ?? {};
-    const timeError = checkClosureTime(startTime, endTime);
+    const { startTime, endTime, reason, force } = req.body ?? {};
+    const inputError = checkClosureTime(startTime, endTime) ?? checkForce(force);
 
-    if (timeError) {
-      return res.status(400).json({ success: false, message: timeError });
+    if (inputError) {
+      return res.status(400).json({ success: false, message: inputError });
     }
 
-    // The check and the create run under one lock (see utils/spaceLock.js)
+    // Without force, a reservation in the period rejects the closure.
+    // With force, the closure cancels those reservations.
+    // The check and the create run under one lock (see utils/spaceLock.js).
     const result = await withSpaceLock(coworkingSpace._id, async (session) => {
-      const conflict = await findReservationConflict(
-        coworkingSpace._id,
-        startTime,
-        endTime,
-        session,
-      );
+      let canceled = [];
 
-      if (conflict) return { error: conflict };
+      if (force) {
+        canceled = await cancelReservations(
+          coworkingSpace._id,
+          startTime,
+          endTime,
+          session,
+        );
+      } else {
+        const conflict = await findReservationConflict(
+          coworkingSpace._id,
+          startTime,
+          endTime,
+          session,
+        );
+
+        if (conflict) return { error: conflict };
+      }
 
       // The space comes from the URL, never from the body
       const [closure] = await Closure.create(
         [{ coworkingSpace: coworkingSpace._id, startTime, endTime, reason }],
         { session },
       );
-      return { closure };
+      return { closure, canceled };
     });
 
     if (result.error) {
       return res.status(400).json({ success: false, message: result.error });
     }
 
-    res.status(201).json({ success: true, data: result.closure });
+    notifyCanceled(result.canceled, coworkingSpace.name, result.closure);
+
+    res.status(201).json({
+      success: true,
+      canceledReservations: result.canceled.length,
+      data: result.closure,
+    });
   } catch (err) {
     return sendError(res, err, "Cannot create Closure");
   }
@@ -166,40 +245,60 @@ exports.updateClosure = async (req, res, next) => {
     const body = req.body ?? {};
     const startTime = body.startTime ?? closure.startTime;
     const endTime = body.endTime ?? closure.endTime;
-    const timeError = checkClosureTime(startTime, endTime);
+    const inputError =
+      checkClosureTime(startTime, endTime) ?? checkForce(body.force);
 
-    if (timeError) {
-      return res.status(400).json({ success: false, message: timeError });
+    if (inputError) {
+      return res.status(400).json({ success: false, message: inputError });
     }
 
-    // The check and the save run under one lock (see utils/spaceLock.js)
-    const conflict = await withSpaceLock(
+    // Without force, a reservation in the new period rejects the change.
+    // With force, the change cancels those reservations.
+    // The check and the save run under one lock (see utils/spaceLock.js).
+    const result = await withSpaceLock(
       closure.coworkingSpace,
       async (session) => {
-        const found = await findReservationConflict(
-          closure.coworkingSpace,
-          startTime,
-          endTime,
-          session,
-        );
+        let canceled = [];
 
-        if (found) return found;
+        if (body.force) {
+          canceled = await cancelReservations(
+            closure.coworkingSpace,
+            startTime,
+            endTime,
+            session,
+          );
+        } else {
+          const conflict = await findReservationConflict(
+            closure.coworkingSpace,
+            startTime,
+            endTime,
+            session,
+          );
+
+          if (conflict) return { error: conflict };
+        }
 
         closure.startTime = startTime;
         closure.endTime = endTime;
         if (body.reason !== undefined) closure.reason = body.reason;
         await closure.save({ session });
-        return null;
+        return { canceled };
       },
     );
 
-    if (conflict) {
-      return res.status(400).json({ success: false, message: conflict });
+    if (result.error) {
+      return res.status(400).json({ success: false, message: result.error });
     }
 
     await closure.populate(populateSpace);
 
-    res.status(200).json({ success: true, data: closure });
+    notifyCanceled(result.canceled, closure.coworkingSpace.name, closure);
+
+    res.status(200).json({
+      success: true,
+      canceledReservations: result.canceled.length,
+      data: closure,
+    });
   } catch (err) {
     return sendError(res, err, "Cannot update Closure");
   }

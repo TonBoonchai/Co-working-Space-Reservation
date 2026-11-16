@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Co-working Space Reservation",
-    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-16).",
+    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-17).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -3620,6 +3620,206 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"startTime\": \"{{day4}}T11:00:00+07:00\",\n  \"endTime\": \"{{day4}}T13:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Admin Force Closure",
+      "description": "The admin (still logged in from step 9) closes Space B by force. The closure cancels the reservations in its period, and the server sends an email to the owner of each canceled reservation. Without SMTP_HOST in config.env, the server writes the emails to its console.",
+      "item": [
+        {
+          "name": "Force Closure - Wrong Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'Force must be true or false'\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"Force must be true or false\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "closures"
+              ]
+            },
+            "description": "Force must be a boolean.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day2}}T00:00:00+07:00\",\n  \"endTime\": \"{{day3}}T00:00:00+07:00\",\n  \"reason\": \"Water leak\",\n  \"force\": \"yes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Force Closure Over Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"2 reservations are canceled\", function () {",
+                  "  pm.expect(pm.response.json().canceledReservations).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "closures"
+              ]
+            },
+            "description": "The same period as 'Create Closure - Over Existing Reservations' in step 13+. Force cancels the admin's reservation from 00 Setup and the user's Reservation #3.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day2}}T00:00:00+07:00\",\n  \"endTime\": \"{{day3}}T00:00:00+07:00\",\n  \"reason\": \"Water leak\",\n  \"force\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Canceled Reservation (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{resv3Id}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{resv3Id}}"
+              ]
+            },
+            "description": "The closure deleted the user's Reservation #3."
+          }
+        },
+        {
+          "name": "Force Update Closure - Grow Over Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"1 reservation is canceled\", function () {",
+                  "  pm.expect(pm.response.json().canceledReservations).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "The same change as 'Update Closure - Grow Over Reservation' in step 13+. Force cancels the day 3 10:00-12:00 reservation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T09:00:00+07:00\",\n  \"force\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"

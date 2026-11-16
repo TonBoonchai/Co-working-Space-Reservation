@@ -14,8 +14,10 @@ participant "<<model>>\n:Closure" as model
 database "<<MongoDB>>\n:coworkingspaces" as spaceDb
 database "<<MongoDB>>\n:reservations" as resvDb
 database "<<MongoDB>>\n:closures" as db
+participant "<<utility>>\n:sendEmail" as mail
+participant "SMTP server" as smtp
 
-client -> server ++ : req.post('/api/v1/coworkingspaces/:coworkingSpaceId/closures')\nAuthorization: Bearer token\n{startTime, endTime, reason?}
+client -> server ++ : req.post('/api/v1/coworkingspaces/:coworkingSpaceId/closures')\nAuthorization: Bearer token\n{startTime, endTime, reason?, force?}
 server -> spaceRouter ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
 spaceRouter -> router ++ : router.use('/:coworkingSpaceId/closures', closureRouter)
 router -> auth ++ : protect, authorize('admin')
@@ -34,22 +36,38 @@ else admin
   alt co-working space not found
     ctrl --> client : 404 No co-working space with the id
   else space found
-    ctrl -> ctrl : checkClosureTime(startTime, endTime)
-    alt missing / invalid date / end not after start
+    ctrl -> ctrl : checkClosureTime(startTime, endTime)\ncheckForce(force)
+    alt missing / invalid date / end not after start / force not boolean
       ctrl --> client : 400 {success:false, message: reason}
-    else time OK
-      ctrl -> resvModel ++ : countDocuments(overlapFilter(coworkingSpace,\nstartTime, endTime))
-      resvModel -> resvDb ++ : ReservationSchema
-      resvDb --> resvModel -- : count
-      resvModel --> ctrl -- : count
-      alt count > 0
+    else input OK
+      alt force is not true
+        ctrl -> resvModel ++ : countDocuments(overlapFilter(coworkingSpace,\nstartTime, endTime))
+        resvModel -> resvDb ++ : ReservationSchema
+        resvDb --> resvModel -- : count
+        resvModel --> ctrl -- : count
+      else force is true
+        ctrl -> resvModel ++ : find(overlapFilter(coworkingSpace,\nstartTime, endTime)).populate('user')
+        resvModel -> resvDb ++ : ReservationSchema
+        resvDb --> resvModel -- : canceled
+        resvModel --> ctrl -- : canceled
+        ctrl -> resvModel ++ : deleteMany({_id: canceled ids})
+        resvModel -> resvDb ++ : ReservationSchema
+        resvDb --> resvModel --
+        resvModel --> ctrl --
+      end
+      alt force is not true and count > 0
         ctrl --> client : 400 "<count> reservations overlap\nthis closure period"
-      else no overlap
+      else no overlap, or force is true
         ctrl -> model ++ : create({coworkingSpace, startTime,\nendTime, reason})
         model -> db ++ : ClosureSchema
         db --> model -- : closure
         model --> ctrl -- : closure
-        ctrl --> client : 201 {success:true, data: closure}
+        ctrl --> client : 201 {success:true,\ncanceledReservations: canceled.length,\ndata: closure}
+        loop each canceled reservation (the response does not wait)
+          ctrl -> mail ++ : sendEmail({to: user.email, subject, text})
+          mail -> smtp : sendMail()
+          deactivate mail
+        end
       end
     end
   end
