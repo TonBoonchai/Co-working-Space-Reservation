@@ -86,7 +86,7 @@ Example closure body (a closure can span many days):
   - Bangkok `02-123-4567`
   - provincial `053-123-456`
 - **Co-working space hours:** `openTime` and `closeTime` use `HH:mm` (24-hour), and the close time must be later than the open time.
-- **Hourly rate:** `hourlyRate` is the price of a space in whole Thai Baht (THB) per hour. The minimum is `0`, and `0` means a free space. The rate is required on create and on update. Only the admin can set it. Everyone can see it, and `GET /coworkingspaces?hourlyRate[lte]=200&sort=hourlyRate` filters and sorts by it. A space from before this field has no rate. A `PUT` on such a space fails until the body includes `hourlyRate`.
+- **Hourly rate:** `hourlyRate` is the price of a space in whole Thai Baht (THB) per hour. The minimum is `0`, and `0` means a free space. The maximum is `9007199254740991` (`Number.MAX_SAFE_INTEGER`). A number string such as `"150"` is accepted. A boolean is rejected, and a blank string counts as no rate. The rate is required on create and on update. Only the admin can set it. Everyone can see it, and `GET /coworkingspaces?hourlyRate[lte]=200&sort=hourlyRate` filters and sorts by it. A space from before this field has no rate. A `PUT` on such a space fails until the body includes `hourlyRate`.
 
 ## Testing with Postman / Newman
 
@@ -99,7 +99,7 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 71 requests, 134 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 80 requests, 152 assertions, all passing.
 
 `npm run test:api` also deletes the admin, the user and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and user stay in the database.
 
