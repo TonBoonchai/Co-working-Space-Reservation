@@ -18,7 +18,7 @@ Term project #6 for **2110503 Software Development Practice**: a REST API that l
 
 ## Tech stack
 
-Node.js, Express 5, MongoDB Atlas with Mongoose, JWT (`jsonwebtoken`), `bcryptjs`, `cookie-parser`, and Postman/Newman for testing.
+Node.js, Express 5, MongoDB Atlas with Mongoose, JWT (`jsonwebtoken`), `bcryptjs`, `cookie-parser`, `nodemailer`, and Postman/Newman for testing.
 
 ## Getting started
 
@@ -29,6 +29,8 @@ npm run dev                                       # http://localhost:5050
 ```
 
 `config/config.env` is gitignored. Never commit it.
+
+To send emails, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_EMAIL` and `SMTP_PASSWORD` in `config/config.env` (see `config/config.env.example`). When `SMTP_HOST` is empty, the server writes each email to its console and does not send it.
 
 ## API
 
@@ -52,10 +54,10 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | PUT | `/reservations/:id` | Owner/Admin | Change `startTime`, `endTime` or `coworkingSpace` |
 | DELETE | `/reservations/:id` | Owner/Admin | Delete a reservation |
 | GET | `/coworkingspaces/:coworkingSpaceId/closures` | Public | Closures of one space, sorted by `startTime` |
-| POST | `/coworkingspaces/:coworkingSpaceId/closures` | Admin | Create a closure (`startTime`, `endTime`, optional `reason`) |
+| POST | `/coworkingspaces/:coworkingSpaceId/closures` | Admin | Create a closure (`startTime`, `endTime`, optional `reason`, optional `force`) |
 | GET | `/closures` | Public | All closures, with the space name and address |
 | GET | `/closures/:id` | Public | One closure |
-| PUT | `/closures/:id` | Admin | Change `startTime`, `endTime` or `reason` |
+| PUT | `/closures/:id` | Admin | Change `startTime`, `endTime` or `reason` (optional `force`) |
 | DELETE | `/closures/:id` | Admin | Delete a closure |
 | POST | `/reservations/:reservationId/reviews` | Owner | Review the space of one ended reservation (`rating` 1-5, `comment`) |
 | GET | `/reservations/:reservationId/reviews` | Public | The review of one reservation |
@@ -82,6 +84,12 @@ Example closure body (a closure can span many days):
 { "startTime": "2026-12-05T00:00:00+07:00", "endTime": "2026-12-07T00:00:00+07:00", "reason": "Air conditioner maintenance" }
 ```
 
+Example force closure body (cancels the reservations in the period):
+
+```json
+{ "startTime": "2026-12-05T00:00:00+07:00", "endTime": "2026-12-07T00:00:00+07:00", "reason": "Water leak", "force": true }
+```
+
 Example review body:
 
 ```json
@@ -93,6 +101,8 @@ Example review body:
 - **Reservation:** must start in the future, end after it starts, start and end on the same day, and fit inside the space's `openTime`-`closeTime`. It must not overlap a closure of its space, and the space must not be full at any time during it. A general user can hold at most 3 reservations; admins have no limit.
 - **Capacity:** the maximum number of reservations at one space that can overlap at the same time. It is a whole number, at least 1, and it is required when a space is created. A space is full at a time when that many reservations are active. A new or edited reservation is rejected when the space is full at any time during it (the error gives the first full time). An edited reservation does not count against its own capacity. Reservations that only touch (12:00-12:00) do not overlap. A lower capacity does not change the reservations that already exist. The check and the write run under the same space lock as the closure checks.
 - **Closure:** a period when one space is closed, for example for maintenance. The end must be later than the start. A closure must not overlap a reservation at its space (the error gives the number of reservations). A `PUT` cannot move a closure to a different space. Two periods overlap only when one starts before the other ends, so periods that only touch (12:00-12:00) are allowed. The overlap rules apply to admins too. The overlap check and the write run in one MongoDB transaction that locks the space, so two requests at the same time cannot create an overlap.
+- **Force closure:** with `"force": true`, a closure `POST` or `PUT` does not reject the reservations in its period. It deletes them in the same transaction as the closure write. `force` must be `true` or `false`. The response gives the number of deleted reservations in `canceledReservations` (`0` without force).
+- **Cancellation email:** after a force closure, the server sends one email to the owner of each deleted reservation. The email gives the space, the reservation time, the closure time and the reason. The response does not wait for the emails, and an email that fails does not undo the closure.
 - **Review:** only the owner of a reservation can review it, and only after the reservation ends. A reservation can have one review. The rating is a whole number from 1 to 5, and the comment is required (at most 1000 characters). The space comes from the reservation. Only the admin can delete a review. A review stays when its reservation is deleted. A review shows only the reviewer's name.
 - **Rating of a space:** each space has `averageRating` (rounded to 2 decimals, `null` when there are no reviews) and `reviewCount`. The API calculates them again after each review create or delete, under the same space lock as the closure checks. A client cannot set them in a space `POST` or `PUT`.
 - **Ownership:** a user can only view, edit or delete their own reservations (401 otherwise). An edit can never change who owns a reservation.
@@ -113,7 +123,7 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 77 requests, 139 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 81 requests, 146 assertions, all passing.
 
 The review folders make a reservation that ends a few seconds after it starts, and wait for it to end. A reservation must start and end on the same day, so these folders fail near midnight Bangkok time.
 
@@ -145,6 +155,7 @@ The review folders make a reservation that ends a few seconds after it starts, a
 | 14+ | Check Review Conditions | `14+ Check Review Conditions` |
 | 15 | Admin Manage Reviews | `15 Admin Manage Reviews` |
 | 16 | Admin Set Capacity | `16 Admin Set Capacity` |
+| 17 | Admin Force Closure | `17 Admin Force Closure` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams

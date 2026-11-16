@@ -22,7 +22,7 @@ rectangle "Co-working Space Reservation System" {
   usecase "Manage Own\nReservations\n(create up to 3, view,\nedit, delete)" as manageOwn
   usecase "Manage Any\nReservation\n(view, edit, delete)" as manageAny
   usecase "Manage\nCo-working Spaces" as manageSpaces
-  usecase "Manage\nClosure Periods\n(create, view,\nedit, delete)" as manageClosures
+  usecase "Manage\nClosure Periods\n(create, view,\nedit, delete, force)" as manageClosures
   usecase "Manage Reviews\n(view, delete any)" as manageReviews
 }
 
@@ -60,6 +60,9 @@ end note
 
 note left of manageClosures
   A closure period must not
-  overlap a reservation
+  overlap a reservation.
+  With force, the closure cancels
+  those reservations and emails
+  each owner.
 end note
 @enduml
