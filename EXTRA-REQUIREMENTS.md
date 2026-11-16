@@ -1,6 +1,6 @@
 # Additional Requirements
 
-Note: IDs are for verbal referencing only. Do not persist them anywhere.
+Note: IDs are for verbal referencing only. Do not persist them anywhere. Do not reference unimplement requirements anywhere either.
 
 ## Payment Management
 
