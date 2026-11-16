@@ -1,0 +1,61 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: Admin Create Closure Period\n(POST /api/v1/coworkingspaces/:coworkingSpaceId/closures)
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:coworkingspaces" as spaceRouter
+participant "<<router>>\n:closures" as router
+participant "<<middleware>>\n:auth" as auth
+participant "<<controllers>>\n:closures" as ctrl
+participant "<<model>>\n:CoworkingSpace" as spaceModel
+participant "<<model>>\n:Reservation" as resvModel
+participant "<<model>>\n:Closure" as model
+database "<<MongoDB>>\n:coworkingspaces" as spaceDb
+database "<<MongoDB>>\n:reservations" as resvDb
+database "<<MongoDB>>\n:closures" as db
+
+client -> server ++ : req.post('/api/v1/coworkingspaces/:coworkingSpaceId/closures')\nAuthorization: Bearer token\n{startTime, endTime, reason?}
+server -> spaceRouter ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
+spaceRouter -> router ++ : router.use('/:coworkingSpaceId/closures', closureRouter)
+router -> auth ++ : protect, authorize('admin')
+auth -> auth : jwt.verify(token)\nreq.user = User.findById(decoded.id)
+alt no / invalid token
+  auth --> client : 401 Not authorize to access this route
+else not admin
+  auth --> client : 403 User role user is not authorized\nto access this route
+else admin
+  auth --> router -- : next()
+  router -> ctrl ++ : addClosure
+  ctrl -> spaceModel ++ : findById(coworkingSpaceId)
+  spaceModel -> spaceDb ++ : CoworkingSpaceSchema
+  spaceDb --> spaceModel -- : coworkingSpace
+  spaceModel --> ctrl -- : coworkingSpace
+  alt co-working space not found
+    ctrl --> client : 404 No co-working space with the id
+  else space found
+    ctrl -> ctrl : checkClosureTime(startTime, endTime)
+    alt missing / invalid date / end not after start
+      ctrl --> client : 400 {success:false, message: reason}
+    else time OK
+      ctrl -> resvModel ++ : countDocuments(overlapFilter(coworkingSpace,\nstartTime, endTime))
+      resvModel -> resvDb ++ : ReservationSchema
+      resvDb --> resvModel -- : count
+      resvModel --> ctrl -- : count
+      alt count > 0
+        ctrl --> client : 400 "<count> reservations overlap\nthis closure period"
+      else no overlap
+        ctrl -> model ++ : create({coworkingSpace, startTime,\nendTime, reason})
+        model -> db ++ : ClosureSchema
+        db --> model -- : closure
+        model --> ctrl -- : closure
+        ctrl --> client : 201 {success:true, data: closure}
+      end
+    end
+  end
+  deactivate ctrl
+end
+deactivate router
+deactivate spaceRouter
+deactivate server
+@enduml

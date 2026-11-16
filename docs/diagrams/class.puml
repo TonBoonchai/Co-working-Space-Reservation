@@ -48,6 +48,10 @@ package "Co-working Space Reservation" <<Frame>> {
     <<GET>> +getReservations(): Reservation
     <<POST>> +addReservation(): Reservation
   }
+  class "SpaceClosures" as SpaceClosures <<Resource>> {
+    <<GET>> +getClosures(): Closure
+    <<POST>> +addClosure(): Closure
+  }
 
   ' ---------- /reservations ----------
   class "Reservations" as Resvs <<Resource>> {
@@ -57,6 +61,16 @@ package "Co-working Space Reservation" <<Frame>> {
     <<GET>> +getReservation(): Reservation
     <<PUT>> +updateReservation(): Reservation
     <<DELETE>> +deleteReservation(): void
+  }
+
+  ' ---------- /closures ----------
+  class "Closures" as Closures <<Resource>> {
+    <<GET>> +getClosures(): Closure
+  }
+  class "Closure" as Closure <<Resource>> {
+    <<GET>> +getClosure(): Closure
+    <<PUT>> +updateClosure(): Closure
+    <<DELETE>> +deleteClosure(): void
   }
 
   ' ---------- representations ----------
@@ -83,6 +97,13 @@ package "Co-working Space Reservation" <<Frame>> {
     -coworkingSpace
     -createdAt
   }
+  class "Closure" as ClosureRep <<Representation>> {
+    -coworkingSpace
+    -startTime
+    -endTime
+    -reason
+    -createdAt
+  }
 
   App ..> Auth : "/auth\n<<Path>>"
   Auth ..> Register : "/register\n<<Path>>"
@@ -93,9 +114,13 @@ package "Co-working Space Reservation" <<Frame>> {
   App ..> Spaces : "/coworkingspaces\n<<Path>>"
   Spaces ..> Space : "/{coworkingSpaceId}\n<<Path>>"
   Space ..> SpaceResvs : "/reservations\n<<Path>>"
+  Space ..> SpaceClosures : "/closures\n<<Path>>"
 
   App ..> Resvs : "/reservations\n<<Path>>"
   Resvs ..> Resv : "/{reservationId}\n<<Path>>"
+
+  App ..> Closures : "/closures\n<<Path>>"
+  Closures ..> Closure : "/{closureId}\n<<Path>>"
 
   Register ..> UserRep : <<use>>
   Login ..> UserRep : <<use>>
@@ -105,5 +130,8 @@ package "Co-working Space Reservation" <<Frame>> {
   SpaceResvs ..> ResvRep : <<use>>
   Resvs ..> ResvRep : <<use>>
   Resv ..> ResvRep : <<use>>
+  SpaceClosures ..> ClosureRep : <<use>>
+  Closures ..> ClosureRep : <<use>>
+  Closure ..> ClosureRep : <<use>>
 }
 @enduml

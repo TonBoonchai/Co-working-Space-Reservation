@@ -16,15 +16,18 @@ rectangle "Co-working Space Reservation System" {
   usecase "Log in" as login
   usecase "Log out" as logout
   usecase "View\nCo-working Spaces" as viewSpaces
+  usecase "View\nClosure Periods" as viewClosures
   usecase "Manage Own\nReservations\n(create up to 3, view,\nedit, delete)" as manageOwn
   usecase "Manage Any\nReservation\n(view, edit, delete)" as manageAny
   usecase "Manage\nCo-working Spaces" as manageSpaces
+  usecase "Manage\nClosure Periods\n(create, view,\nedit, delete)" as manageClosures
 }
 
 user -- register
 user -- login
 user -- logout
 user -- viewSpaces
+user -- viewClosures
 user -- manageOwn
 
 register -- admin
@@ -32,12 +35,19 @@ login -- admin
 logout -- admin
 manageAny -- admin
 manageSpaces -- admin
+manageClosures -- admin
 
 note right of manageOwn
   A reservation must:
   - start in the future
   - end after it starts, on the same day
   - fit the space's open-close time
+  - not overlap a closure period
   A user may hold at most 3 (admin: no limit)
+end note
+
+note left of manageClosures
+  A closure period must not
+  overlap a reservation
 end note
 @enduml

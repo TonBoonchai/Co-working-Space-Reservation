@@ -9,8 +9,10 @@ participant "<<middleware>>\n:auth" as auth
 participant "<<controllers>>\n:reservations" as ctrl
 participant "<<model>>\n:Reservation" as model
 participant "<<model>>\n:CoworkingSpace" as spaceModel
+participant "<<model>>\n:Closure" as closureModel
 database "<<MongoDB>>\n:reservations" as db
 database "<<MongoDB>>\n:coworkingspaces" as spaceDb
+database "<<MongoDB>>\n:closures" as closureDb
 
 client -> server ++ : req.put('/api/v1/reservations/:id')\nAuthorization: Bearer token\n{startTime?, endTime?, coworkingSpace?}
 server -> router ++ : app.use('/api/v1/reservations', reservations)
@@ -35,11 +37,19 @@ else owner or admin
   alt time not allowed
     ctrl --> client : 400 {success:false, message: reason}
   else time OK
-    ctrl -> model ++ : reservation.save()
-    model -> db ++ : ReservationSchema
-    db --> model -- : updated reservation
-    model --> ctrl -- : reservation
-    ctrl --> client : 200 {success:true, data: reservation}
+    ctrl -> closureModel ++ : findOne(overlapFilter(coworkingSpace,\nstartTime, endTime))
+    closureModel -> closureDb ++ : ClosureSchema
+    closureDb --> closureModel -- : closure / null
+    closureModel --> ctrl -- : closure / null
+    alt closure overlaps the new time / space
+      ctrl --> client : 400 "<space> is closed from\n<start> to <end> (<reason>)"
+    else space open
+      ctrl -> model ++ : reservation.save()
+      model -> db ++ : ReservationSchema
+      db --> model -- : updated reservation
+      model --> ctrl -- : reservation
+      ctrl --> client : 200 {success:true, data: reservation}
+    end
   end
 end
 deactivate ctrl
