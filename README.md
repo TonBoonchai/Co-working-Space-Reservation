@@ -44,7 +44,7 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/coworkingspaces/:id` | Public | One space |
 | POST | `/coworkingspaces` | Admin | Create a space |
 | PUT | `/coworkingspaces/:id` | Admin | Update a space |
-| DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations and its closures |
+| DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations, its closures and its reviews |
 | POST | `/coworkingspaces/:coworkingSpaceId/reservations` | User/Admin | Create a reservation (`startTime`, `endTime`) |
 | GET | `/coworkingspaces/:coworkingSpaceId/reservations` | Private | Reservations at one space (own only for users) |
 | GET | `/reservations` | Private | Users: own reservations. Admin: all |
@@ -57,6 +57,12 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/closures/:id` | Public | One closure |
 | PUT | `/closures/:id` | Admin | Change `startTime`, `endTime` or `reason` |
 | DELETE | `/closures/:id` | Admin | Delete a closure |
+| POST | `/reservations/:reservationId/reviews` | Owner | Review the space of one ended reservation (`rating` 1-5, `comment`) |
+| GET | `/reservations/:reservationId/reviews` | Public | The review of one reservation |
+| GET | `/coworkingspaces/:coworkingSpaceId/reviews` | Public | Reviews of one space, newest first |
+| GET | `/reviews` | Public | All reviews, with the reviewer name and the space |
+| GET | `/reviews/:id` | Public | One review |
+| DELETE | `/reviews/:id` | Admin | Delete a review |
 
 Example reservation body (times are Bangkok time):
 
@@ -70,10 +76,18 @@ Example closure body (a closure can span many days):
 { "startTime": "2026-12-05T00:00:00+07:00", "endTime": "2026-12-07T00:00:00+07:00", "reason": "Air conditioner maintenance" }
 ```
 
+Example review body:
+
+```json
+{ "rating": 4, "comment": "Quiet room and fast Wi-Fi." }
+```
+
 ### Rules and validation
 
 - **Reservation:** must start in the future, end after it starts, start and end on the same day, and fit inside the space's `openTime`-`closeTime`. It must not overlap a closure of its space. A general user can hold at most 3 reservations; admins have no limit.
 - **Closure:** a period when one space is closed, for example for maintenance. The end must be later than the start. A closure must not overlap a reservation at its space (the error gives the number of reservations). A `PUT` cannot move a closure to a different space. Two periods overlap only when one starts before the other ends, so periods that only touch (12:00-12:00) are allowed. The overlap rules apply to admins too. The overlap check and the write run in one MongoDB transaction that locks the space, so two requests at the same time cannot create an overlap.
+- **Review:** only the owner of a reservation can review it, and only after the reservation ends. A reservation can have one review. The rating is a whole number from 1 to 5, and the comment is required (at most 1000 characters). The space comes from the reservation. Only the admin can delete a review. A review stays when its reservation is deleted. A review shows only the reviewer's name.
+- **Rating of a space:** each space has `averageRating` (rounded to 2 decimals, `null` when there are no reviews) and `reviewCount`. The API calculates them again after each review create or delete, under the same space lock as the closure checks. A client cannot set them in a space `POST` or `PUT`.
 - **Ownership:** a user can only view, edit or delete their own reservations (401 otherwise). An edit can never change who owns a reservation.
 - **Thai telephone numbers** (users and spaces, dashes optional):
   - mobile `081-234-5678` / `0812345678`
@@ -92,9 +106,11 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 61 requests, 114 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 74 requests, 134 assertions, all passing.
 
-`npm run test:api` also deletes the admin, the user and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and user stay in the database.
+The review folders make a reservation that ends a few seconds after it starts, and wait for it to end. A reservation must start and end on the same day, so these folders fail near midnight Bangkok time.
+
+`npm run test:api` also deletes the admin, the users and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and users stay in the database.
 
 `npm run test:race` sends 20 pairs of requests at the same time. Each pair is one reservation and one closure for the same space and time. Exactly one request of each pair must succeed. The script makes its own admin and space, and deletes both at the end, also when the test fails.
 
@@ -118,6 +134,9 @@ The collection creates its own admin, user and spaces with unique names for each
 | 12 | Admin Delete Any Booking | `12 Admin Delete Any Reservation` |
 | 13 | Admin Manage Closure Periods | `13 Admin Manage Closure Periods` |
 | 13+ | Check Closure Conditions | `13+ Check Closure Conditions` |
+| 14 | User Review Co-working Space | `14 User Review Co-working Space` |
+| 14+ | Check Review Conditions | `14+ Check Review Conditions` |
+| 15 | Admin Manage Reviews | `15 Admin Manage Reviews` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -126,7 +145,7 @@ PlantUML sources are in [`docs/diagrams/`](docs/diagrams/), and rendered PNGs ar
 
 - Use case: [`usecase.png`](docs/diagrams/png/usecase.png)
 - Class diagram (UML Profile for REST): [`class.png`](docs/diagrams/png/class.png)
-- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png)
+- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png), [create review](docs/diagrams/png/10-create-review.png)
 
 To re-render, use the PlantUML VS Code extension, or run `java -jar plantuml.jar -tpng docs/diagrams/**/*.puml`.
 

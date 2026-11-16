@@ -33,6 +33,16 @@ const CoworkingSpaceSchema = new mongoose.Schema({
     required: [true, "Please add a close time"],
     match: [TIME_HHMM_REGEX, "Close time must be in HH:mm format (e.g. 20:00)"],
   },
+  // Written only by utils/spaceRating.js, after each review change.
+  // averageRating is null when the space has no reviews.
+  averageRating: {
+    type: Number,
+    default: null,
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
