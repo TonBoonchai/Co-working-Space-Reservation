@@ -88,6 +88,7 @@ package "Co-working Space Reservation" <<Frame>> {
     -tel
     -openTime
     -closeTime
+    -hourlyRate
     -createdAt
   }
   class "Reservation" as ResvRep <<Representation>> {
