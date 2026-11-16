@@ -11,7 +11,8 @@
     "dev": "nodemon server.js",
     "test:api": "node tests/api.js",
     "test:race": "node tests/closure-race.js",
-    "test:api:report": "node tests/api.js -r cli,htmlextra --reporter-htmlextra-export newman/report.html"
+    "test:api:report": "node tests/api.js -r cli,htmlextra --reporter-htmlextra-export newman/report.html",
+    "demo:reset": "node tests/demo-reset.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
