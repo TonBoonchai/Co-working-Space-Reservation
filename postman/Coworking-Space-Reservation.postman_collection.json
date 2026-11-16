@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Co-working Space Reservation",
-    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-14).",
+    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-15).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -3548,6 +3548,406 @@
             "description": "No token. Everyone can filter spaces by rate. The _id filter keeps other data in the database out of the result.",
             "auth": {
               "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 User Calculate Reservation Price",
+      "description": "A user calculates the total price in THB of a reservation from its duration. The calculation does not create a reservation.",
+      "item": [
+        {
+          "name": "Calculate Price - 3 Hours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Price is 540 THB for 180 minutes at 180 THB per hour\", function () {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.durationMinutes).to.eql(180);",
+                  "  pm.expect(data.hourlyRate).to.eql(180);",
+                  "  pm.expect(data.totalPrice).to.eql(540);",
+                  "  pm.expect(data.currency).to.eql(\"THB\");",
+                  "});",
+                  "pm.test(\"Response gives the space and the period\", function () {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.coworkingSpace).to.eql(pm.environment.get(\"spaceAId\"));",
+                  "  pm.expect(new Date(data.startTime).getTime()).to.eql(new Date(pm.environment.get(\"day1\") + \"T09:00:00+07:00\").getTime());",
+                  "  pm.expect(new Date(data.endTime).getTime()).to.eql(new Date(pm.environment.get(\"day1\") + \"T12:00:00+07:00\").getTime());",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "price"
+              ]
+            },
+            "description": "Space A costs 180 THB per hour (see folder 14). 3 hours cost 540 THB. The endpoint is public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Calculate Price - Part of an Hour",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Price is 270 THB for 90 minutes at 180 THB per hour\", function () {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.durationMinutes).to.eql(90);",
+                  "  pm.expect(data.hourlyRate).to.eql(180);",
+                  "  pm.expect(data.totalPrice).to.eql(270);",
+                  "  pm.expect(data.currency).to.eql(\"THB\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "price"
+              ]
+            },
+            "description": "The price is in proportion to the duration. 90 minutes at 180 THB per hour cost 270 THB.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T10:30:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Calculate Price - Free Space",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Price is 0 THB for 480 minutes at 0 THB per hour\", function () {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.durationMinutes).to.eql(480);",
+                  "  pm.expect(data.hourlyRate).to.eql(0);",
+                  "  pm.expect(data.totalPrice).to.eql(0);",
+                  "  pm.expect(data.currency).to.eql(\"THB\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "price"
+              ]
+            },
+            "description": "Space B is free (see folder 14). The price is 0 THB.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T17:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Calculate Price - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Please add a start time and an end time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "price"
+              ]
+            },
+            "description": "The price needs a start time and an end time."
+          }
+        },
+        {
+          "name": "Calculate Price - End Before Start",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"End time must be later than start time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "price"
+              ]
+            },
+            "description": "The time rules of a new reservation apply.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T15:00:00+07:00\",\n  \"endTime\": \"{{day1}}T14:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Calculate Price - Outside Opening Hours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message gives the opening hours\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"09:00-18:00\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "price"
+              ]
+            },
+            "description": "Space B opens at 09:00. The price of a period that the space cannot accept is not calculated.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T07:00:00+07:00\",\n  \"endTime\": \"{{day1}}T10:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Calculate Price - Unknown Space",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"No co-working space with the id of 000000000000000000000000\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/000000000000000000000000/price",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "000000000000000000000000",
+                "price"
+              ]
+            },
+            "description": "The space must exist.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         }
