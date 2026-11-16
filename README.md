@@ -42,7 +42,7 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/auth/logout` | Public | Clear the token cookie |
 | GET | `/coworkingspaces` | Public | List spaces (supports `select`, `sort`, `page`, `limit`, `gt/gte/lt/lte/in` filters) |
 | GET | `/coworkingspaces/:id` | Public | One space |
-| POST | `/coworkingspaces` | Admin | Create a space |
+| POST | `/coworkingspaces` | Admin | Create a space (`name`, `address`, `tel`, `openTime`, `closeTime`, `hourlyRate`) |
 | PUT | `/coworkingspaces/:id` | Admin | Update a space |
 | DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations and its closures |
 | POST | `/coworkingspaces/:coworkingSpaceId/reservations` | User/Admin | Create a reservation (`startTime`, `endTime`) |
@@ -57,6 +57,12 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/closures/:id` | Public | One closure |
 | PUT | `/closures/:id` | Admin | Change `startTime`, `endTime` or `reason` |
 | DELETE | `/closures/:id` | Admin | Delete a closure |
+
+Example space body (`hourlyRate` is in THB per hour):
+
+```json
+{ "name": "Siam Co-Work Hub", "address": "254 Phayathai Rd, Pathum Wan, Bangkok 10330", "tel": "02-123-4567", "openTime": "08:00", "closeTime": "20:00", "hourlyRate": 150 }
+```
 
 Example reservation body (times are Bangkok time):
 
@@ -80,19 +86,20 @@ Example closure body (a closure can span many days):
   - Bangkok `02-123-4567`
   - provincial `053-123-456`
 - **Co-working space hours:** `openTime` and `closeTime` use `HH:mm` (24-hour), and the close time must be later than the open time.
+- **Hourly rate:** `hourlyRate` is the price of a space in whole Thai Baht (THB) per hour. The minimum is `0`, and `0` means a free space. The rate is required on create and on update. Only the admin can set it. Everyone can see it, and `GET /coworkingspaces?hourlyRate[lte]=200&sort=hourlyRate` filters and sorts by it. A space from before this field has no rate. A `PUT` on such a space fails until the body includes `hourlyRate`.
 
 ## Testing with Postman / Newman
 
 Import both files from [`postman/`](postman/) into Postman, select the **Co-working Space Reservation - Local** environment, and run the collection with the **Collection Runner**. Or run it from the terminal (with the server running):
 
 ```bash
-npm install -g newman newman-reporter-htmlextra
+npm install                 # newman and the htmlextra reporter are devDependencies
 npm run test:api            # CLI output
 npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 61 requests, 114 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 76 requests, 144 assertions, all passing.
 
 `npm run test:api` also deletes the admin, the user and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and user stay in the database.
 
@@ -118,6 +125,7 @@ The collection creates its own admin, user and spaces with unique names for each
 | 12 | Admin Delete Any Booking | `12 Admin Delete Any Reservation` |
 | 13 | Admin Manage Closure Periods | `13 Admin Manage Closure Periods` |
 | 13+ | Check Closure Conditions | `13+ Check Closure Conditions` |
+| 14 | Admin Set Hourly Rate | `14 Admin Set Hourly Rate` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -136,7 +144,7 @@ The first commit is VacQ as it was, so `git diff` against it (or the pull reques
 
 | Area | VacQ | This project |
 |---|---|---|
-| Resources | `Hospital`, `Appointment` | `CoworkingSpace` (name, address, tel, openTime, closeTime), `Reservation` (startTime, endTime) |
+| Resources | `Hospital`, `Appointment` | `CoworkingSpace` (name, address, tel, openTime, closeTime, hourlyRate), `Reservation` (startTime, endTime) |
 | Routes | `/hospitals`, `/appointments` | `/coworkingspaces`, `/reservations`, nested `/coworkingspaces/:id/reservations` |
 | Registration | name, email, password | adds required **Thai telephone number**; errors explain what is wrong (invalid tel, duplicate email) |
 | Create rules | max 3 appointments | max 3, plus future start, end after start, same day, within open-close hours |

@@ -19,9 +19,12 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.4"
+    "mongoose": "^9.9.4",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
+    "newman": "^6.2.3",
+    "newman-reporter-htmlextra": "^1.23.1",
     "nodemon": "^3.1.14"
   }
 }

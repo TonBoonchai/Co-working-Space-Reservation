@@ -17,7 +17,7 @@ ctrl -> model ++ : find(filter).select().sort().skip().limit()
 model -> db ++ : CoworkingSpaceSchema
 db --> model -- : coworkingSpaces
 model --> ctrl -- : coworkingSpaces
-ctrl --> client : 200 {success:true, count, pagination,\ndata:[{name, address, tel, openTime, closeTime}]}
+ctrl --> client : 200 {success:true, count, pagination,\ndata:[{name, address, tel, openTime, closeTime, hourlyRate}]}
 deactivate ctrl
 deactivate router
 deactivate server
