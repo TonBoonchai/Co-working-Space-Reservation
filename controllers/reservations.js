@@ -3,6 +3,7 @@ const CoworkingSpace = require("../models/CoworkingSpace");
 const Closure = require("../models/Closure");
 const sendError = require("../utils/sendError");
 const { overlapFilter } = require("../utils/overlap");
+const { withSpaceLock } = require("../utils/spaceLock");
 const {
   checkReservationTime,
   formatBangkok,
@@ -19,10 +20,18 @@ const populateUser = { path: "user", select: "name email tel" };
 
 // Returns an error message when a closure overlaps the period, or null.
 // Run it only after checkReservationTime, so that the dates are valid.
-const findClosureConflict = async (coworkingSpace, startTime, endTime) => {
+// Run it inside withSpaceLock, with the same session as the write.
+const findClosureConflict = async (
+  coworkingSpace,
+  startTime,
+  endTime,
+  session,
+) => {
   const closure = await Closure.findOne(
     overlapFilter(coworkingSpace._id, new Date(startTime), new Date(endTime)),
-  ).sort("startTime");
+  )
+    .sort("startTime")
+    .session(session);
 
   if (!closure) return null;
 
@@ -120,22 +129,12 @@ exports.addReservation = async (req, res, next) => {
     }
 
     // Same day, inside opening hours, in the future, end after start
-    const { startTime, endTime } = req.body;
+    // (A request with no body has req.body undefined in Express 5)
+    const { startTime, endTime } = req.body ?? {};
     const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
 
     if (timeError) {
       return res.status(400).json({ success: false, message: timeError });
-    }
-
-    // The space must not be closed at any time during the reservation
-    const closureError = await findClosureConflict(
-      coworkingSpace,
-      startTime,
-      endTime,
-    );
-
-    if (closureError) {
-      return res.status(400).json({ success: false, message: closureError });
     }
 
     // If the user is not an admin, they can only create 3 reservations
@@ -152,16 +151,39 @@ exports.addReservation = async (req, res, next) => {
       }
     }
 
-    const reservation = await Reservation.create({
-      startTime,
-      endTime,
-      user: req.user.id,
-      coworkingSpace: coworkingSpace._id,
+    // The space must not be closed at any time during the reservation.
+    // The check and the create run under one lock (see utils/spaceLock.js).
+    const result = await withSpaceLock(coworkingSpace._id, async (session) => {
+      const closureError = await findClosureConflict(
+        coworkingSpace,
+        startTime,
+        endTime,
+        session,
+      );
+
+      if (closureError) return { error: closureError };
+
+      const [reservation] = await Reservation.create(
+        [
+          {
+            startTime,
+            endTime,
+            user: req.user.id,
+            coworkingSpace: coworkingSpace._id,
+          },
+        ],
+        { session },
+      );
+      return { reservation };
     });
+
+    if (result.error) {
+      return res.status(400).json({ success: false, message: result.error });
+    }
 
     res.status(201).json({
       success: true,
-      data: reservation,
+      data: result.reservation,
     });
   } catch (err) {
     return sendError(res, err, "Cannot create Reservation");
@@ -191,10 +213,10 @@ exports.updateReservation = async (req, res, next) => {
     }
 
     // Only the time and the co-working space can change (never the owner)
-    const startTime = req.body.startTime ?? reservation.startTime;
-    const endTime = req.body.endTime ?? reservation.endTime;
-    const coworkingSpaceId =
-      req.body.coworkingSpace ?? reservation.coworkingSpace;
+    const body = req.body ?? {};
+    const startTime = body.startTime ?? reservation.startTime;
+    const endTime = body.endTime ?? reservation.endTime;
+    const coworkingSpaceId = body.coworkingSpace ?? reservation.coworkingSpace;
 
     const coworkingSpace = await CoworkingSpace.findById(coworkingSpaceId);
 
@@ -211,21 +233,32 @@ exports.updateReservation = async (req, res, next) => {
       return res.status(400).json({ success: false, message: timeError });
     }
 
-    // The space must not be closed at any time during the reservation
-    const closureError = await findClosureConflict(
-      coworkingSpace,
-      startTime,
-      endTime,
+    // The new space must not be closed at any time during the reservation.
+    // The check and the save run under one lock on the new space.
+    const closureError = await withSpaceLock(
+      coworkingSpace._id,
+      async (session) => {
+        const conflict = await findClosureConflict(
+          coworkingSpace,
+          startTime,
+          endTime,
+          session,
+        );
+
+        if (conflict) return conflict;
+
+        reservation.startTime = startTime;
+        reservation.endTime = endTime;
+        reservation.coworkingSpace = coworkingSpace._id;
+        await reservation.save({ session });
+        return null;
+      },
     );
 
     if (closureError) {
       return res.status(400).json({ success: false, message: closureError });
     }
 
-    reservation.startTime = startTime;
-    reservation.endTime = endTime;
-    reservation.coworkingSpace = coworkingSpace._id;
-    await reservation.save();
     await reservation.populate(populateSpace);
 
     res.status(200).json({

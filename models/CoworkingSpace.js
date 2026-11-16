@@ -37,6 +37,11 @@ const CoworkingSpaceSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // Written only by utils/spaceLock.js. Hidden from API responses.
+  lockVersion: {
+    type: Number,
+    select: false,
+  },
 });
 
 // Close time must be later than open time ("HH:mm" strings compare correctly)

@@ -3,6 +3,7 @@ const CoworkingSpace = require("../models/CoworkingSpace");
 const Reservation = require("../models/Reservation");
 const sendError = require("../utils/sendError");
 const { overlapFilter } = require("../utils/overlap");
+const { withSpaceLock } = require("../utils/spaceLock");
 
 const populateSpace = { path: "coworkingSpace", select: "name address" };
 
@@ -27,11 +28,17 @@ const checkClosureTime = (startTime, endTime) => {
   return null;
 };
 
-// Returns an error message when reservations overlap the period, or null
-const findReservationConflict = async (coworkingSpaceId, startTime, endTime) => {
+// Returns an error message when reservations overlap the period, or null.
+// Run it inside withSpaceLock, with the same session as the write.
+const findReservationConflict = async (
+  coworkingSpaceId,
+  startTime,
+  endTime,
+  session,
+) => {
   const count = await Reservation.countDocuments(
     overlapFilter(coworkingSpaceId, new Date(startTime), new Date(endTime)),
-  );
+  ).session(session);
 
   if (count === 0) return null;
 
@@ -104,32 +111,38 @@ exports.addClosure = async (req, res, next) => {
       });
     }
 
-    const { startTime, endTime, reason } = req.body;
+    // A request with no body has req.body undefined in Express 5
+    const { startTime, endTime, reason } = req.body ?? {};
     const timeError = checkClosureTime(startTime, endTime);
 
     if (timeError) {
       return res.status(400).json({ success: false, message: timeError });
     }
 
-    const conflict = await findReservationConflict(
-      coworkingSpace._id,
-      startTime,
-      endTime,
-    );
+    // The check and the create run under one lock (see utils/spaceLock.js)
+    const result = await withSpaceLock(coworkingSpace._id, async (session) => {
+      const conflict = await findReservationConflict(
+        coworkingSpace._id,
+        startTime,
+        endTime,
+        session,
+      );
 
-    if (conflict) {
-      return res.status(400).json({ success: false, message: conflict });
-    }
+      if (conflict) return { error: conflict };
 
-    // The space comes from the URL, never from the body
-    const closure = await Closure.create({
-      coworkingSpace: coworkingSpace._id,
-      startTime,
-      endTime,
-      reason,
+      // The space comes from the URL, never from the body
+      const [closure] = await Closure.create(
+        [{ coworkingSpace: coworkingSpace._id, startTime, endTime, reason }],
+        { session },
+      );
+      return { closure };
     });
 
-    res.status(201).json({ success: true, data: closure });
+    if (result.error) {
+      return res.status(400).json({ success: false, message: result.error });
+    }
+
+    res.status(201).json({ success: true, data: result.closure });
   } catch (err) {
     return sendError(res, err, "Cannot create Closure");
   }
@@ -150,28 +163,40 @@ exports.updateClosure = async (req, res, next) => {
     }
 
     // Only the time and the reason can change (never the co-working space)
-    const startTime = req.body.startTime ?? closure.startTime;
-    const endTime = req.body.endTime ?? closure.endTime;
+    const body = req.body ?? {};
+    const startTime = body.startTime ?? closure.startTime;
+    const endTime = body.endTime ?? closure.endTime;
     const timeError = checkClosureTime(startTime, endTime);
 
     if (timeError) {
       return res.status(400).json({ success: false, message: timeError });
     }
 
-    const conflict = await findReservationConflict(
+    // The check and the save run under one lock (see utils/spaceLock.js)
+    const conflict = await withSpaceLock(
       closure.coworkingSpace,
-      startTime,
-      endTime,
+      async (session) => {
+        const found = await findReservationConflict(
+          closure.coworkingSpace,
+          startTime,
+          endTime,
+          session,
+        );
+
+        if (found) return found;
+
+        closure.startTime = startTime;
+        closure.endTime = endTime;
+        if (body.reason !== undefined) closure.reason = body.reason;
+        await closure.save({ session });
+        return null;
+      },
     );
 
     if (conflict) {
       return res.status(400).json({ success: false, message: conflict });
     }
 
-    closure.startTime = startTime;
-    closure.endTime = endTime;
-    if (req.body.reason !== undefined) closure.reason = req.body.reason;
-    await closure.save();
     await closure.populate(populateSpace);
 
     res.status(200).json({ success: true, data: closure });
