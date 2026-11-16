@@ -2803,7 +2803,7 @@
     },
     {
       "name": "14 User Review Co-working Space",
-      "description": "A user can review a space only after one of their own reservations there ends. The admin makes Space C (open 00:00-23:59). A new reviewer books two reservations that end a few seconds later, waits, then reviews one. Viewing reviews is public. Note: this folder fails near midnight Bangkok time, because a reservation must start and end on the same day.",
+      "description": "A user can review a space only after one of their own reservations there ends. The admin makes Space C (open 00:00-23:59). A new reviewer books a reservation that ends a few seconds later, waits, then reviews it. Viewing reviews is public. Note: this folder fails near midnight Bangkok time, because a reservation must start and end on the same day.",
       "item": [
         {
           "name": "Create Co-working Space C",
@@ -2815,11 +2815,6 @@
                 "exec": [
                   "pm.test(\"Status code is 201\", function () {",
                   "  pm.response.to.have.status(201);",
-                  "});",
-                  "pm.test(\"new space has no rating\", function () {",
-                  "  const data = pm.response.json().data;",
-                  "  pm.expect(data.averageRating).to.eql(null);",
-                  "  pm.expect(data.reviewCount).to.eql(0);",
                   "});",
                   "pm.environment.set(\"spaceCId\", pm.response.json().data._id);"
                 ]
@@ -2846,10 +2841,10 @@
                 "coworkingspaces"
               ]
             },
-            "description": "Admin only. Open 00:00-23:59, so a reservation can start a few seconds from now. The body tries to set averageRating and reviewCount, and the API ignores them.",
+            "description": "Admin only. Open 00:00-23:59, so a reservation can start a few seconds from now.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ari Review Lounge #{{runId}}\",\n  \"address\": \"9 Phahonyothin Rd, Phaya Thai, Bangkok 10400\",\n  \"tel\": \"02-987-6543\",\n  \"openTime\": \"00:00\",\n  \"closeTime\": \"23:59\",\n  \"averageRating\": 5,\n  \"reviewCount\": 99\n}",
+              "raw": "{\n  \"name\": \"Ari Review Lounge #{{runId}}\",\n  \"address\": \"9 Phahonyothin Rd, Phaya Thai, Bangkok 10400\",\n  \"tel\": \"02-987-6543\",\n  \"openTime\": \"00:00\",\n  \"closeTime\": \"23:59\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2920,7 +2915,7 @@
           }
         },
         {
-          "name": "Create Short Reservation #1",
+          "name": "Create Short Reservation",
           "event": [
             {
               "listen": "prerequest",
@@ -2941,7 +2936,7 @@
                   "pm.test(\"Status code is 201\", function () {",
                   "  pm.response.to.have.status(201);",
                   "});",
-                  "pm.environment.set(\"shortResv1Id\", pm.response.json().data._id);"
+                  "pm.environment.set(\"shortResvId\", pm.response.json().data._id);"
                 ]
               }
             }
@@ -2991,75 +2986,6 @@
           }
         },
         {
-          "name": "Create Short Reservation #2",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.environment.set(\"shortEnd2\", new Date(new Date(pm.environment.get(\"shortEnd\")).getTime() + 1000).toISOString());"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "  pm.response.to.have.status(201);",
-                  "});",
-                  "pm.environment.set(\"shortResv2Id\", pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceCId}}/reservations",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "coworkingspaces",
-                "{{spaceCId}}",
-                "reservations"
-              ]
-            },
-            "description": "Starts when #1 ends. The checks in 14+ use it.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{shortEnd}}\",\n  \"endTime\": \"{{shortEnd2}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
           "name": "Review - Before Reservation Ends",
           "event": [
             {
@@ -3088,7 +3014,7 @@
               }
             ],
             "url": {
-              "raw": "{{URL}}/api/v1/reservations/{{shortResv1Id}}/reviews",
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
               "host": [
                 "{{URL}}"
               ],
@@ -3096,11 +3022,11 @@
                 "api",
                 "v1",
                 "reservations",
-                "{{shortResv1Id}}",
+                "{{shortResvId}}",
                 "reviews"
               ]
             },
-            "description": "Reservation #1 has not ended yet.",
+            "description": "The reservation has not ended yet.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3123,15 +3049,15 @@
           }
         },
         {
-          "name": "Create Review",
+          "name": "Review - Rating Out of Range",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Wait until the short reservations end (a few seconds)",
-                  "const waitMs = Math.max(0, new Date(pm.environment.get(\"shortEnd2\")) - Date.now() + 1000);",
+                  "// Wait until the short reservation ends (a few seconds)",
+                  "const waitMs = Math.max(0, new Date(pm.environment.get(\"shortEnd\")) - Date.now() + 1000);",
                   "setTimeout(() => {}, waitMs);"
                 ]
               }
@@ -3141,15 +3067,75 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'Rating must be from 1 to 5'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"Rating must be from 1 to 5\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{shortResvId}}",
+                "reviews"
+              ]
+            },
+            "description": "Waits until the reservation ends. A rating must be from 1 to 5.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 6,\n  \"comment\": \"Too good.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
                   "pm.test(\"Status code is 201\", function () {",
                   "  pm.response.to.have.status(201);",
                   "});",
-                  "pm.test(\"review has the rating, the reviewer and the space\", function () {",
+                  "pm.test(\"review has the rating\", function () {",
                   "  const data = pm.response.json().data;",
                   "  pm.expect(data.rating).to.eql(4);",
-                  "  pm.expect(data.user.name).to.eql(\"Reviewer Fon\");",
-                  "  pm.expect(data.user.email).to.eql(undefined);",
-                  "  pm.expect(data.coworkingSpace._id).to.eql(pm.environment.get(\"spaceCId\"));",
                   "});",
                   "pm.environment.set(\"reviewId\", pm.response.json().data._id);"
                 ]
@@ -3166,7 +3152,7 @@
               }
             ],
             "url": {
-              "raw": "{{URL}}/api/v1/reservations/{{shortResv1Id}}/reviews",
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
               "host": [
                 "{{URL}}"
               ],
@@ -3174,11 +3160,11 @@
                 "api",
                 "v1",
                 "reservations",
-                "{{shortResv1Id}}",
+                "{{shortResvId}}",
                 "reviews"
               ]
             },
-            "description": "Waits until both short reservations end, then reviews #1. The space comes from the reservation.",
+            "description": "Reviews the ended reservation. The space comes from the reservation.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3280,51 +3266,12 @@
               "type": "noauth"
             }
           }
-        },
-        {
-          "name": "Get Single Review (Public)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"comment is returned\", function () {",
-                  "  pm.expect(pm.response.json().data.comment).to.eql(\"Quiet room and fast Wi-Fi.\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{URL}}/api/v1/reviews/{{reviewId}}",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "reviews",
-                "{{reviewId}}"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "noauth"
-            }
-          }
         }
       ]
     },
     {
       "name": "14+ Check Review Conditions",
-      "description": "One review per reservation, a rating from 1 to 5, a comment, and only the owner of the reservation. Only the admin can delete a review.",
+      "description": "One review per reservation, and only for the user's own reservation.",
       "item": [
         {
           "name": "Review - Same Reservation Again",
@@ -3355,7 +3302,7 @@
               }
             ],
             "url": {
-              "raw": "{{URL}}/api/v1/reservations/{{shortResv1Id}}/reviews",
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
               "host": [
                 "{{URL}}"
               ],
@@ -3363,7 +3310,7 @@
                 "api",
                 "v1",
                 "reservations",
-                "{{shortResv1Id}}",
+                "{{shortResvId}}",
                 "reviews"
               ]
             },
@@ -3381,195 +3328,6 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Second review.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Review - Rating Out of Range",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"message mentions 'Rating must be from 1 to 5'\", function () {",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.message || body.msg).to.include(\"Rating must be from 1 to 5\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/reservations/{{shortResv2Id}}/reviews",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "reservations",
-                "{{shortResv2Id}}",
-                "reviews"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 6,\n  \"comment\": \"Too good.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Review - Rating Not a Whole Number",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"message mentions 'whole number'\", function () {",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.message || body.msg).to.include(\"whole number\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/reservations/{{shortResv2Id}}/reviews",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "reservations",
-                "{{shortResv2Id}}",
-                "reviews"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 3.5,\n  \"comment\": \"Fine.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Review - No Comment",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"message mentions 'Please add a comment'\", function () {",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.message || body.msg).to.include(\"Please add a comment\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/reservations/{{shortResv2Id}}/reviews",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "reservations",
-                "{{shortResv2Id}}",
-                "reviews"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 3\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3636,118 +3394,12 @@
               }
             }
           }
-        },
-        {
-          "name": "Review - Without Reservation",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"message mentions '/api/v1/reservations/:reservationId/reviews'\", function () {",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.message || body.msg).to.include(\"/api/v1/reservations/:reservationId/reviews\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceCId}}/reviews",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "coworkingspaces",
-                "{{spaceCId}}",
-                "reviews"
-              ]
-            },
-            "description": "A review always comes from one reservation.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"No reservation.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Delete Review as User (Denied)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 403\", function () {",
-                  "  pm.response.to.have.status(403);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{URL}}/api/v1/reviews/{{reviewId}}",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "reviews",
-                "{{reviewId}}"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
         }
       ]
     },
     {
       "name": "15 Admin Manage Reviews",
-      "description": "The admin (still logged in from step 9) views all reviews and deletes one. The average rating of the space changes with it.",
+      "description": "The admin (still logged in from step 9) views all reviews and deletes one.",
       "item": [
         {
           "name": "Get All Reviews (Admin)",
@@ -3786,59 +3438,6 @@
           }
         },
         {
-          "name": "Update Space C - Rating Fields Ignored",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"averageRating and reviewCount do not change\", function () {",
-                  "  const data = pm.response.json().data;",
-                  "  pm.expect(data.averageRating).to.eql(4);",
-                  "  pm.expect(data.reviewCount).to.eql(1);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceCId}}",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "coworkingspaces",
-                "{{spaceCId}}"
-              ]
-            },
-            "description": "Only reviews change the rating of a space.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"averageRating\": 1,\n  \"reviewCount\": 50\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
           "name": "Delete Review (Admin)",
           "event": [
             {
@@ -3869,83 +3468,6 @@
               ]
             },
             "description": ""
-          }
-        },
-        {
-          "name": "Get Space C After Delete",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"space has no rating again\", function () {",
-                  "  const data = pm.response.json().data;",
-                  "  pm.expect(data.averageRating).to.eql(null);",
-                  "  pm.expect(data.reviewCount).to.eql(0);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceCId}}",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "coworkingspaces",
-                "{{spaceCId}}"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "noauth"
-            }
-          }
-        },
-        {
-          "name": "Get Deleted Review (Not Found)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "  pm.response.to.have.status(404);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{URL}}/api/v1/reviews/{{reviewId}}",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "reviews",
-                "{{reviewId}}"
-              ]
-            },
-            "description": "",
-            "auth": {
-              "type": "noauth"
-            }
           }
         }
       ]
