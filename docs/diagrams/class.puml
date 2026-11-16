@@ -52,6 +52,9 @@ package "Co-working Space Reservation" <<Frame>> {
     <<GET>> +getClosures(): Closure
     <<POST>> +addClosure(): Closure
   }
+  class "SpaceReviews" as SpaceReviews <<Resource>> {
+    <<GET>> +getReviews(): Review
+  }
 
   ' ---------- /reservations ----------
   class "Reservations" as Resvs <<Resource>> {
@@ -62,6 +65,10 @@ package "Co-working Space Reservation" <<Frame>> {
     <<PUT>> +updateReservation(): Reservation
     <<DELETE>> +deleteReservation(): void
   }
+  class "ReservationReviews" as ResvReviews <<Resource>> {
+    <<GET>> +getReviews(): Review
+    <<POST>> +addReview(): Review
+  }
 
   ' ---------- /closures ----------
   class "Closures" as Closures <<Resource>> {
@@ -71,6 +78,15 @@ package "Co-working Space Reservation" <<Frame>> {
     <<GET>> +getClosure(): Closure
     <<PUT>> +updateClosure(): Closure
     <<DELETE>> +deleteClosure(): void
+  }
+
+  ' ---------- /reviews ----------
+  class "Reviews" as Reviews <<Resource>> {
+    <<GET>> +getReviews(): Review
+  }
+  class "Review" as Review <<Resource>> {
+    <<GET>> +getReview(): Review
+    <<DELETE>> +deleteReview(): void
   }
 
   ' ---------- representations ----------
@@ -88,6 +104,8 @@ package "Co-working Space Reservation" <<Frame>> {
     -tel
     -openTime
     -closeTime
+    -averageRating
+    -reviewCount
     -createdAt
   }
   class "Reservation" as ResvRep <<Representation>> {
@@ -104,6 +122,14 @@ package "Co-working Space Reservation" <<Frame>> {
     -reason
     -createdAt
   }
+  class "Review" as ReviewRep <<Representation>> {
+    -rating
+    -comment
+    -user
+    -coworkingSpace
+    -reservation
+    -createdAt
+  }
 
   App ..> Auth : "/auth\n<<Path>>"
   Auth ..> Register : "/register\n<<Path>>"
@@ -115,12 +141,17 @@ package "Co-working Space Reservation" <<Frame>> {
   Spaces ..> Space : "/{coworkingSpaceId}\n<<Path>>"
   Space ..> SpaceResvs : "/reservations\n<<Path>>"
   Space ..> SpaceClosures : "/closures\n<<Path>>"
+  Space ..> SpaceReviews : "/reviews\n<<Path>>"
 
   App ..> Resvs : "/reservations\n<<Path>>"
   Resvs ..> Resv : "/{reservationId}\n<<Path>>"
+  Resv ..> ResvReviews : "/reviews\n<<Path>>"
 
   App ..> Closures : "/closures\n<<Path>>"
   Closures ..> Closure : "/{closureId}\n<<Path>>"
+
+  App ..> Reviews : "/reviews\n<<Path>>"
+  Reviews ..> Review : "/{reviewId}\n<<Path>>"
 
   Register ..> UserRep : <<use>>
   Login ..> UserRep : <<use>>
@@ -133,5 +164,9 @@ package "Co-working Space Reservation" <<Frame>> {
   SpaceClosures ..> ClosureRep : <<use>>
   Closures ..> ClosureRep : <<use>>
   Closure ..> ClosureRep : <<use>>
+  SpaceReviews ..> ReviewRep : <<use>>
+  ResvReviews ..> ReviewRep : <<use>>
+  Reviews ..> ReviewRep : <<use>>
+  Review ..> ReviewRep : <<use>>
 }
 @enduml

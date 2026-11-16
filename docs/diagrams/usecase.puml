@@ -17,10 +17,13 @@ rectangle "Co-working Space Reservation System" {
   usecase "Log out" as logout
   usecase "View\nCo-working Spaces" as viewSpaces
   usecase "View\nClosure Periods" as viewClosures
+  usecase "View Reviews\n(average rating,\nreview count)" as viewReviews
+  usecase "Review\nCo-working Space\n(rating 1-5, comment)" as review
   usecase "Manage Own\nReservations\n(create up to 3, view,\nedit, delete)" as manageOwn
   usecase "Manage Any\nReservation\n(view, edit, delete)" as manageAny
   usecase "Manage\nCo-working Spaces" as manageSpaces
   usecase "Manage\nClosure Periods\n(create, view,\nedit, delete)" as manageClosures
+  usecase "Manage Reviews\n(view, delete any)" as manageReviews
 }
 
 user -- register
@@ -29,6 +32,8 @@ user -- logout
 user -- viewSpaces
 user -- viewClosures
 user -- manageOwn
+user -- viewReviews
+user -- review
 
 register -- admin
 login -- admin
@@ -36,6 +41,7 @@ logout -- admin
 manageAny -- admin
 manageSpaces -- admin
 manageClosures -- admin
+manageReviews -- admin
 
 note right of manageOwn
   A reservation must:
@@ -44,6 +50,12 @@ note right of manageOwn
   - fit the space's open-close time
   - not overlap a closure period
   A user may hold at most 3 (admin: no limit)
+end note
+
+note right of review
+  Only after one of the user's own
+  reservations at the space ends.
+  One review per reservation.
 end note
 
 note left of manageClosures

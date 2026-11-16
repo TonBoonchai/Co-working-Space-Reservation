@@ -1,0 +1,70 @@
+@startuml
+!include _style.iuml
+title Sequence Diagram: User Create Review\n(POST /api/v1/reservations/:reservationId/reviews)
+
+actor "Client\n(Postman)" as client
+participant "<<javaScript>>\n:server" as server
+participant "<<router>>\n:reservations" as resvRouter
+participant "<<router>>\n:reviews" as router
+participant "<<middleware>>\n:auth" as auth
+participant "<<controllers>>\n:reviews" as ctrl
+participant "<<model>>\n:Reservation" as resvModel
+participant "<<model>>\n:Review" as model
+participant "<<model>>\n:CoworkingSpace" as spaceModel
+database "<<MongoDB>>\n:reservations" as resvDb
+database "<<MongoDB>>\n:reviews" as db
+database "<<MongoDB>>\n:coworkingspaces" as spaceDb
+
+client -> server ++ : req.post('/api/v1/reservations/:reservationId/reviews')\nAuthorization: Bearer token\n{rating, comment}
+server -> resvRouter ++ : app.use('/api/v1/reservations', reservations)
+resvRouter -> router ++ : router.use('/:reservationId/reviews', reviewRouter)
+router -> auth ++ : protect, authorize('admin', 'user')
+auth -> auth : jwt.verify(token)\nreq.user = User.findById(decoded.id)
+alt no / invalid token
+  auth --> client : 401 Not authorize to access this route
+else logged in
+  auth --> router -- : next()
+  router -> ctrl ++ : addReview
+  ctrl -> resvModel ++ : findById(reservationId)
+  resvModel -> resvDb ++ : ReservationSchema
+  resvDb --> resvModel -- : reservation
+  resvModel --> ctrl -- : reservation
+  alt reservation not found
+    ctrl --> client : 404 No reservation with the id
+  else not the owner
+    ctrl --> client : 401 User is not authorized\nto review this reservation
+  else reservation has not ended
+    ctrl --> client : 400 You can review a reservation\nonly after it ends
+  else ended, owner
+    ctrl -> model ++ : exists({reservation})
+    model -> db ++ : ReviewSchema
+    db --> model -- : existing
+    model --> ctrl -- : existing
+    alt review exists
+      ctrl --> client : 400 This reservation already has a review
+    else no review
+      ctrl -> model ++ : create({rating, comment, user,\ncoworkingSpace, reservation})
+      model -> db ++ : ReviewSchema
+      db --> model -- : review
+      model --> ctrl -- : review
+      alt rating not 1-5 / no comment
+        ctrl --> client : 400 {success:false, message: reason}
+      else valid
+        ctrl -> model ++ : aggregate(average, count)
+        model -> db ++ : ReviewSchema
+        db --> model -- : stats
+        model --> ctrl -- : stats
+        ctrl -> spaceModel ++ : updateOne({averageRating, reviewCount})
+        spaceModel -> spaceDb ++ : CoworkingSpaceSchema
+        spaceDb --> spaceModel --
+        spaceModel --> ctrl --
+        ctrl --> client : 201 {success:true, data: review}
+      end
+    end
+  end
+  deactivate ctrl
+end
+deactivate router
+deactivate resvRouter
+deactivate server
+@enduml

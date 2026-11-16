@@ -1,7 +1,16 @@
 const CoworkingSpace = require("../models/CoworkingSpace");
 const Reservation = require("../models/Reservation");
 const Closure = require("../models/Closure");
+const Review = require("../models/Review");
+const { RATING_FIELDS } = require("../utils/spaceRating");
 const errorMessage = require("../utils/errorMessage");
+
+// A copy of the body without the fields that only the reviews can change
+const withoutRatingFields = (body) => {
+  const copy = { ...body };
+  RATING_FIELDS.forEach((field) => delete copy[field]);
+  return copy;
+};
 
 //@desc     Get all co-working spaces
 //@route    GET /api/v1/coworkingspaces
@@ -116,7 +125,9 @@ exports.getCoworkingSpace = async (req, res, next) => {
 //@access   Private (admin)
 exports.createCoworkingSpace = async (req, res, next) => {
   try {
-    const coworkingSpace = await CoworkingSpace.create(req.body);
+    const coworkingSpace = await CoworkingSpace.create(
+      withoutRatingFields(req.body),
+    );
     res.status(201).json({ success: true, data: coworkingSpace });
   } catch (err) {
     res.status(400).json({
@@ -141,7 +152,7 @@ exports.updateCoworkingSpace = async (req, res, next) => {
     }
 
     // save() runs the full validation, including the open/close time check
-    Object.assign(coworkingSpace, req.body);
+    Object.assign(coworkingSpace, withoutRatingFields(req.body));
     await coworkingSpace.save();
 
     res.status(200).json({ success: true, data: coworkingSpace });
@@ -153,7 +164,7 @@ exports.updateCoworkingSpace = async (req, res, next) => {
   }
 };
 
-//@desc     Delete co-working space (and its reservations and closures)
+//@desc     Delete co-working space (and its reservations, closures and reviews)
 //@route    DELETE /api/v1/coworkingspaces/:id
 //@access   Private (admin)
 exports.deleteCoworkingSpace = async (req, res, next) => {
@@ -169,6 +180,7 @@ exports.deleteCoworkingSpace = async (req, res, next) => {
 
     await Reservation.deleteMany({ coworkingSpace: req.params.id });
     await Closure.deleteMany({ coworkingSpace: req.params.id });
+    await Review.deleteMany({ coworkingSpace: req.params.id });
     await CoworkingSpace.deleteOne({ _id: req.params.id });
 
     res.status(200).json({ success: true, data: {} });

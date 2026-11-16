@@ -51,8 +51,8 @@ const main = async () => {
 
   try {
     await removeTestData({
-      emails: [values.adminEmail, values.userEmail],
-      spaceIds: [values.spaceAId, values.spaceBId],
+      emails: [values.adminEmail, values.userEmail, values.reviewerEmail],
+      spaceIds: [values.spaceAId, values.spaceBId, values.spaceCId],
     });
   } catch (err) {
     console.error("TEARDOWN ERROR:", err.message);
