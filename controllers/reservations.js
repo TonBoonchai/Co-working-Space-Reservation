@@ -1,7 +1,12 @@
 const Reservation = require("../models/Reservation");
 const CoworkingSpace = require("../models/CoworkingSpace");
-const errorMessage = require("../utils/errorMessage");
-const { checkReservationTime } = require("../utils/reservationTime");
+const Closure = require("../models/Closure");
+const sendError = require("../utils/sendError");
+const { overlapFilter } = require("../utils/overlap");
+const {
+  checkReservationTime,
+  formatBangkok,
+} = require("../utils/reservationTime");
 
 // A general user can hold at most this many reservations (admins are exempt)
 const MAX_RESERVATIONS = 3;
@@ -12,14 +17,17 @@ const populateSpace = {
 };
 const populateUser = { path: "user", select: "name email tel" };
 
-// Bad ids / invalid data are the client's fault (400); anything else is 500
-const sendError = (res, err, fallback) => {
-  console.log(err);
-  const clientError = ["CastError", "ValidationError"].includes(err.name);
-  return res.status(clientError ? 400 : 500).json({
-    success: false,
-    message: errorMessage(err, fallback),
-  });
+// Returns an error message when a closure overlaps the period, or null.
+// Run it only after checkReservationTime, so that the dates are valid.
+const findClosureConflict = async (coworkingSpace, startTime, endTime) => {
+  const closure = await Closure.findOne(
+    overlapFilter(coworkingSpace._id, new Date(startTime), new Date(endTime)),
+  ).sort("startTime");
+
+  if (!closure) return null;
+
+  const reason = closure.reason ? ` (${closure.reason})` : "";
+  return `${coworkingSpace.name} is closed from ${formatBangkok(closure.startTime)} to ${formatBangkok(closure.endTime)}${reason}`;
 };
 
 const isOwnerOrAdmin = (reservation, user) =>
@@ -119,6 +127,17 @@ exports.addReservation = async (req, res, next) => {
       return res.status(400).json({ success: false, message: timeError });
     }
 
+    // The space must not be closed at any time during the reservation
+    const closureError = await findClosureConflict(
+      coworkingSpace,
+      startTime,
+      endTime,
+    );
+
+    if (closureError) {
+      return res.status(400).json({ success: false, message: closureError });
+    }
+
     // If the user is not an admin, they can only create 3 reservations
     if (req.user.role !== "admin") {
       const existedReservations = await Reservation.countDocuments({
@@ -190,6 +209,17 @@ exports.updateReservation = async (req, res, next) => {
 
     if (timeError) {
       return res.status(400).json({ success: false, message: timeError });
+    }
+
+    // The space must not be closed at any time during the reservation
+    const closureError = await findClosureConflict(
+      coworkingSpace,
+      startTime,
+      endTime,
+    );
+
+    if (closureError) {
+      return res.status(400).json({ success: false, message: closureError });
     }
 
     reservation.startTime = startTime;

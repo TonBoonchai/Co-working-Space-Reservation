@@ -1,5 +1,6 @@
 const CoworkingSpace = require("../models/CoworkingSpace");
 const Reservation = require("../models/Reservation");
+const Closure = require("../models/Closure");
 const errorMessage = require("../utils/errorMessage");
 
 //@desc     Get all co-working spaces
@@ -152,7 +153,7 @@ exports.updateCoworkingSpace = async (req, res, next) => {
   }
 };
 
-//@desc     Delete co-working space (and its reservations)
+//@desc     Delete co-working space (and its reservations and closures)
 //@route    DELETE /api/v1/coworkingspaces/:id
 //@access   Private (admin)
 exports.deleteCoworkingSpace = async (req, res, next) => {
@@ -167,6 +168,7 @@ exports.deleteCoworkingSpace = async (req, res, next) => {
     }
 
     await Reservation.deleteMany({ coworkingSpace: req.params.id });
+    await Closure.deleteMany({ coworkingSpace: req.params.id });
     await CoworkingSpace.deleteOne({ _id: req.params.id });
 
     res.status(200).json({ success: true, data: {} });

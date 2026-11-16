@@ -25,4 +25,7 @@ const ReservationSchema = new mongoose.Schema({
   },
 });
 
+// Used by the overlap queries (see utils/overlap.js)
+ReservationSchema.index({ coworkingSpace: 1, startTime: 1, endTime: 1 });
+
 module.exports = mongoose.model("Reservation", ReservationSchema);

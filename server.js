@@ -24,10 +24,12 @@ app.use(cookieParser());
 const coworkingspaces = require("./routes/coworkingspaces");
 const auth = require("./routes/auth");
 const reservations = require("./routes/reservations");
+const closures = require("./routes/closures");
 
 app.use("/api/v1/coworkingspaces", coworkingspaces);
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/reservations", reservations);
+app.use("/api/v1/closures", closures);
 
 const PORT = process.env.PORT || 5000;
 
