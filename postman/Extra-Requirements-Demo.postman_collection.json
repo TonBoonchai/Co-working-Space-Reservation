@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Extra Requirements Demo",
-    "description": "A short, linear walk through the extra requirements, for a demo video. Send the requests from top to bottom, or run the collection with the Collection Runner. Use the \"Co-working Space Reservation - Local\" environment for {{URL}}.\n\nRun `npm run demo:reset` before each run. The reset deletes the users named Demo Admin, Demo Alice and Demo Bob, and the demo space, so \"0. Setup\" can register them again.\n\nEach request name starts with a 4-digit number in the run order. Most names then give the actor: Admin, Alice or Bob. A name with no actor is a public request. The collection keeps one token for each actor, so you never log in or log out between requests.\n\nTo show the emails in real inboxes, set the collection variables adminEmail, aliceEmail and bobEmail to real addresses. The server must have SMTP_HOST set to send the emails. Without it, the server console shows each email.\n\n\"1.1\" makes a reservation that ends a few seconds from now. A reservation must start and end on the same day, so do not record within a few seconds of midnight Bangkok time.",
+    "description": "A short, linear walk through the extra requirements, for a demo video of about 2 minutes. Send the requests from top to bottom, or run the collection with the Collection Runner. Use the \"Co-working Space Reservation - Local\" environment for {{URL}}.\n\nRun `npm run demo:reset` before each run. The reset deletes the users named Demo Admin, Demo Alice and Demo Bob, and the demo space, so \"0. Setup\" can register them again.\n\nEach request name starts with a 4-digit number in the run order. Most names then give the actor: Admin, Alice or Bob. A name with no actor is a public request. The collection keeps one token for each actor, so you never log in or log out between requests.\n\nA name that ends with (Email) makes the server send an email to Alice. Show the 3 emails at the end of the video. To show the emails in real inboxes, set the collection variables adminEmail, aliceEmail and bobEmail to real addresses. The server must have SMTP_HOST set to send the emails. Without it, the server console shows each email.\n\n\"0005\" makes a reservation that ends a few seconds from now. A reservation must start and end on the same day, so do not record within a few seconds of midnight Bangkok time.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -27,6 +27,7 @@
   "item": [
     {
       "name": "0. Setup",
+      "description": "Send these before you record. Run `npm run demo:reset` first.",
       "item": [
         {
           "name": "0001 Admin Registers",
@@ -36,9 +37,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// The demo days, 1 to 5 days from now (Bangkok time)",
+                  "// The demo days, 1 and 2 days from now (Bangkok time)",
                   "const bkkDay = (n) => new Date(Date.now() + 7 * 3600e3 + n * 86400e3).toISOString().slice(0, 10);",
-                  "[1, 2, 3, 4, 5].forEach((n) => pm.collectionVariables.set(\"day\" + n, bkkDay(n)));"
+                  "[1, 2].forEach((n) => pm.collectionVariables.set(\"day\" + n, bkkDay(n)));"
                 ]
               }
             },
@@ -241,2315 +242,384 @@
           },
           "response": []
         }
-      ],
-      "description": "Admin, Alice (user), Bob (user) and one space with capacity 2. The second request deletes the spaces that earlier demo runs left, so each run starts from a clean slate. The space opens 00:00-23:59, so the review demo can use a reservation that ends a few seconds from now."
+      ]
     },
     {
       "name": "1. Review Management",
+      "description": "Review only after the reservation ends and only once. Rating and review count of the space. Any user views reviews. The admin views and deletes any review.",
       "item": [
         {
-          "name": "1.1 Rate 1-5 and review only after own reservation ends, once per reservation",
-          "item": [
+          "name": "0005 Alice Makes Short Reservation",
+          "event": [
             {
-              "name": "0005 Alice Makes Short Reservation",
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.collectionVariables.set(\"shortStart\", new Date(Date.now() + 2000).toISOString());",
-                      "pm.collectionVariables.set(\"shortEnd\", new Date(Date.now() + 4000).toISOString());"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"shortResvId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{shortStart}}\",\n  \"endTime\": \"{{shortEnd}}\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The reservation ends 4 seconds from now",
+                  "pm.collectionVariables.set(\"shortStart\", new Date(Date.now() + 2000).toISOString());",
+                  "pm.collectionVariables.set(\"shortEnd\", new Date(Date.now() + 4000).toISOString());"
+                ]
+              }
             },
             {
-              "name": "0006 Alice Reviews Too Early",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"only after it ends\\\"\", () => pm.expect(pm.response.json().message).to.include(\"only after it ends\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{shortResvId}}",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Quiet room and fast Wi-Fi.\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0007 Alice Rates 6",
-              "event": [
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "// Wait until the short reservation ends",
-                      "const waitMs = Math.max(0, new Date(pm.collectionVariables.get(\"shortEnd\")) - Date.now() + 1000);",
-                      "setTimeout(() => {}, waitMs);"
-                    ]
-                  }
-                },
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"Rating must be from 1 to 5\\\"\", () => pm.expect(pm.response.json().message).to.include(\"Rating must be from 1 to 5\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{shortResvId}}",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"rating\": 6,\n  \"comment\": \"Too good.\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0008 Alice Reviews",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"reviewId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{shortResvId}}",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Quiet room and fast Wi-Fi.\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0009 Alice Reviews Again",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"already has a review\\\"\", () => pm.expect(pm.response.json().message).to.include(\"already has a review\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{shortResvId}}",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Second review.\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0010 Bob Reviews Alice's",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 401\", () => pm.response.to.have.status(401));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{shortResvId}}",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"rating\": 1,\n  \"comment\": \"Not my reservation.\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "1.2 Show average rating and review count of each space",
-          "item": [
-            {
-              "name": "0011 Get Space Rating",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"averageRating is 4 and reviewCount is 1\", () => {",
-                      "  const d = pm.response.json().data;",
-                      "  pm.expect(d.averageRating).to.eql(4);",
-                      "  pm.expect(d.reviewCount).to.eql(1);",
-                      "});"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "noauth"
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "1.3 User views reviews of any space",
-          "item": [
-            {
-              "name": "0012 Bob Gets Reviews",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"count is 1\", () => pm.expect(pm.response.json().count).to.eql(1));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "1.4 Admin views and deletes any review",
-          "item": [
-            {
-              "name": "0013 Admin Gets Reviews",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"List has the review\", () => pm.expect(pm.response.json().data.map((r) => r._id)).to.include(pm.collectionVariables.get(\"reviewId\")));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reviews",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0014 Bob Deletes Review",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 403\", () => pm.response.to.have.status(403));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reviews/{{reviewId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reviews",
-                    "{{reviewId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0015 Admin Deletes Review",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reviews/{{reviewId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reviews",
-                    "{{reviewId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0016 Rating After Delete",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"averageRating is null and reviewCount is 0\", () => {",
-                      "  const d = pm.response.json().data;",
-                      "  pm.expect(d.averageRating).to.eql(null);",
-                      "  pm.expect(d.reviewCount).to.eql(0);",
-                      "});"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "noauth"
-                }
-              },
-              "response": []
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "2. Space Management",
-      "item": [
-        {
-          "name": "2.1 Admin creates, reads, updates and deletes closure periods",
-          "item": [
-            {
-              "name": "0017 Admin Creates Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"closureId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T12:00:00+07:00\",\n  \"reason\": \"Air conditioner maintenance\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0018 Admin Gets Closures",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"count is 1\", () => pm.expect(pm.response.json().count).to.eql(1));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0019 Admin Updates Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Reason is updated\", () => pm.expect(pm.response.json().data.reason).to.eql(\"Air conditioner and network maintenance\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/closures/{{closureId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "closures",
-                    "{{closureId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"endTime\": \"{{day1}}T14:00:00+07:00\",\n  \"reason\": \"Air conditioner and network maintenance\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0020 Admin Deletes Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/closures/{{closureId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "closures",
-                    "{{closureId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0021 Admin Rechecks Closures",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"count is 0\", () => pm.expect(pm.response.json().count).to.eql(0));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "2.2 Reject new or edited reservations that overlap a closure",
-          "item": [
-            {
-              "name": "0022 Admin Creates Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T09:00:00+07:00\",\n  \"endTime\": \"{{day2}}T12:00:00+07:00\",\n  \"reason\": \"Painting\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0023 Alice Reserves in Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"is closed from\\\"\", () => pm.expect(pm.response.json().message).to.include(\"is closed from\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T10:00:00+07:00\",\n  \"endTime\": \"{{day2}}T11:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0024 Alice Reserves After Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"aliceResvId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T13:00:00+07:00\",\n  \"endTime\": \"{{day2}}T15:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0025 Alice Edits Into Closure",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"is closed from\\\"\", () => pm.expect(pm.response.json().message).to.include(\"is closed from\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{aliceResvId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{aliceResvId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T11:00:00+07:00\",\n  \"endTime\": \"{{day2}}T15:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "2.3 Reject new closures that overlap existing reservations",
-          "item": [
-            {
-              "name": "0026 Admin Closes Over Alice",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"1 reservation overlaps this closure period\\\"\", () => pm.expect(pm.response.json().message).to.include(\"1 reservation overlaps this closure period\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T14:00:00+07:00\",\n  \"endTime\": \"{{day2}}T16:00:00+07:00\",\n  \"reason\": \"Deep cleaning\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "2.4 Admin specifies space capacity",
-          "item": [
-            {
-              "name": "0027 Admin Sets Capacity 1",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"capacity is 1\", () => pm.expect(pm.response.json().data.capacity).to.eql(1));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"capacity\": 1\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "2.5 Reject new reservations when the space is full",
-          "item": [
-            {
-              "name": "0028 Bob Reserves Full Slot",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"(capacity 1)\\\"\", () => pm.expect(pm.response.json().message).to.include(\"(capacity 1)\"));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T13:00:00+07:00\",\n  \"endTime\": \"{{day2}}T15:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"shortResvId\", pm.response.json().data._id);"
+                ]
+              }
             }
           ],
-          "description": "Alice holds 13:00-15:00 and the capacity is 1."
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{shortStart}}\",\n  \"endTime\": \"{{shortEnd}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
         },
         {
-          "name": "2.6 Admin force-closes the space (cancels reservations in the period)",
-          "item": [
+          "name": "0006 Alice Reviews Too Early",
+          "event": [
             {
-              "name": "0029 Admin Force-Closes",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.test(\"1 reservation is canceled\", () => pm.expect(pm.response.json().canceledReservations).to.eql(1));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day2}}T13:00:00+07:00\",\n  \"endTime\": \"{{day2}}T18:00:00+07:00\",\n  \"reason\": \"Water leak\",\n  \"force\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0030 Alice Gets Canceled Reservation",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 404\", () => pm.response.to.have.status(404));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{aliceResvId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{aliceResvId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "3. Notification Management",
-      "item": [
-        {
-          "name": "3.1 Email the user when a closure cancels their reservation",
-          "item": [
-            {
-              "name": "0031 Alice Reserves",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day3}}T09:00:00+07:00\",\n  \"endTime\": \"{{day3}}T10:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0032 Admin Force-Closes",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.test(\"1 reservation is canceled\", () => pm.expect(pm.response.json().canceledReservations).to.eql(1));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "closures"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day3}}T08:00:00+07:00\",\n  \"endTime\": \"{{day3}}T11:00:00+07:00\",\n  \"reason\": \"Power outage\",\n  \"force\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message includes \\\"only after it ends\\\"\", () => pm.expect(pm.response.json().message).to.include(\"only after it ends\"));"
+                ]
+              }
             }
           ],
-          "description": "Email: \"Your reservation at ... is canceled\". Show the email in the inbox of {{aliceEmail}}. Without SMTP_HOST, the server console shows the email."
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{shortResvId}}",
+                "reviews"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Quiet room and fast Wi-Fi.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
         },
         {
-          "name": "3.2 Email the user when the admin edits or deletes their reservation",
-          "item": [
+          "name": "0007 Alice Reviews",
+          "event": [
             {
-              "name": "0033 Alice Reserves",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"aliceResvId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day3}}T13:00:00+07:00\",\n  \"endTime\": \"{{day3}}T14:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Wait until the short reservation ends",
+                  "const waitMs = Math.max(0, new Date(pm.collectionVariables.get(\"shortEnd\")) - Date.now() + 1000);",
+                  "setTimeout(() => {}, waitMs);"
+                ]
+              }
             },
             {
-              "name": "0034 Admin Edits Alice's",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{aliceResvId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{aliceResvId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day3}}T14:00:00+07:00\",\n  \"endTime\": \"{{day3}}T15:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0035 Admin Deletes Alice's",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{aliceResvId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{aliceResvId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"reviewId\", pm.response.json().data._id);"
+                ]
+              }
             }
           ],
-          "description": "Emails: \"An admin changed your reservation at ...\" and \"An admin deleted your reservation at ...\". Show the email in the inbox of {{aliceEmail}}. Without SMTP_HOST, the server console shows the email."
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{shortResvId}}",
+                "reviews"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Quiet room and fast Wi-Fi.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
         },
         {
-          "name": "3.3 Email the user when the waitlist gives them a reservation",
-          "item": [
+          "name": "0008 Alice Reviews Again",
+          "event": [
             {
-              "name": "0036 Bob Fills Space",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"bobResvId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day4}}T10:00:00+07:00\",\n  \"endTime\": \"{{day4}}T12:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0037 Alice Joins Waitlist",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/waitlist",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "waitlist"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day4}}T10:00:00+07:00\",\n  \"endTime\": \"{{day4}}T12:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0038 Bob Cancels",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{bobResvId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{bobResvId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message includes \\\"already has a review\\\"\", () => pm.expect(pm.response.json().message).to.include(\"already has a review\"));"
+                ]
+              }
             }
           ],
-          "description": "Email: \"You have a reservation at ...\". Show the email in the inbox of {{aliceEmail}}. Without SMTP_HOST, the server console shows the email."
-        }
-      ]
-    },
-    {
-      "name": "4. Waitlist Management",
-      "item": [
-        {
-          "name": "4.1 User joins the waitlist when the space is full",
-          "item": [
-            {
-              "name": "0039 Bob Waitlists Free Slot",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
-                      "pm.test(\"Message includes \\\"is not full\\\"\", () => pm.expect(pm.response.json().message).to.include(\"is not full\"));"
-                    ]
-                  }
-                }
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{shortResvId}}/reviews",
+              "host": [
+                "{{URL}}"
               ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/waitlist",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "waitlist"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day5}}T10:00:00+07:00\",\n  \"endTime\": \"{{day5}}T12:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{shortResvId}}",
+                "reviews"
+              ]
             },
-            {
-              "name": "0040 Admin Fills Space",
-              "event": [
+            "auth": {
+              "type": "bearer",
+              "bearer": [
                 {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"adminResvId\", pm.response.json().data._id);"
-                    ]
-                  }
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
                 }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day5}}T10:00:00+07:00\",\n  \"endTime\": \"{{day5}}T12:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              ]
             },
-            {
-              "name": "0041 Bob Joins Waitlist",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));"
-                    ]
-                  }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Second review.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/waitlist",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "waitlist"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day5}}T10:00:00+07:00\",\n  \"endTime\": \"{{day5}}T12:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
+              }
             }
-          ]
+          },
+          "response": []
         },
         {
-          "name": "4.2 First user on the waitlist gets the canceled reservation",
-          "item": [
+          "name": "0009 Get Space Rating",
+          "event": [
             {
-              "name": "0042 Admin Cancels",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations/{{adminResvId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations",
-                    "{{adminResvId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0043 Bob Gets Reservations",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Bob has the reservation from the waitlist\", () => {",
-                      "  const want = new Date(pm.collectionVariables.get(\"day5\") + \"T10:00:00+07:00\").getTime();",
-                      "  pm.expect(pm.response.json().data.some((r) => new Date(r.startTime).getTime() === want)).to.eql(true);",
-                      "});"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/reservations",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{bobToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"averageRating is 4 and reviewCount is 1\", () => {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.expect(d.averageRating).to.eql(4);",
+                  "  pm.expect(d.reviewCount).to.eql(1);",
+                  "});"
+                ]
+              }
             }
           ],
-          "description": "The server also sends the waitlist email to Bob."
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}"
+              ]
+            }
+          },
+          "response": []
         },
         {
-          "name": "4.3 User views and leaves their waitlist entries",
-          "item": [
+          "name": "0010 Bob Gets Reviews",
+          "event": [
             {
-              "name": "0044 Alice Joins Waitlist",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                      "pm.collectionVariables.set(\"waitlistId\", pm.response.json().data._id);"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/waitlist",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "coworkingspaces",
-                    "{{spaceId}}",
-                    "waitlist"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"startTime\": \"{{day5}}T10:00:00+07:00\",\n  \"endTime\": \"{{day5}}T12:00:00+07:00\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0045 Alice Gets Waitlist",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"count is 1\", () => pm.expect(pm.response.json().count).to.eql(1));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/waitlist",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "waitlist"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0046 Alice Leaves Waitlist",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/waitlist/{{waitlistId}}",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "waitlist",
-                    "{{waitlistId}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "0047 Alice Gets Waitlist",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"count is 0\", () => pm.expect(pm.response.json().count).to.eql(0));"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{URL}}/api/v1/waitlist",
-                  "host": [
-                    "{{URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "waitlist"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{aliceToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"count is 1\", () => pm.expect(pm.response.json().count).to.eql(1));"
+                ]
+              }
             }
           ],
-          "description": "Bob holds 10:00-12:00 and the capacity is 1."
-        }
-      ]
-    },
-    {
-      "name": "5. Cleanup",
-      "item": [
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reviews",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "reviews"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bobToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
         {
-          "name": "0048 Admin Deletes Space",
+          "name": "0011 Admin Gets Reviews",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"List has the review\", () => pm.expect(pm.response.json().data.map((r) => r._id)).to.include(pm.collectionVariables.get(\"reviewId\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/reviews",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0012 Admin Deletes Review",
           "event": [
             {
               "listen": "test",
@@ -2564,6 +634,441 @@
           "request": {
             "method": "DELETE",
             "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/reviews/{{reviewId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "{{reviewId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Space Management",
+      "description": "Closure create, read, update and delete. Reservations and edits that overlap a closure are rejected. Closures that overlap a reservation are rejected. Capacity, and a full space rejects a reservation. Force closure. The admin edit and the force closure each send an email to Alice.",
+      "item": [
+        {
+          "name": "0013 Admin Creates Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"closureId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "closures"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T12:00:00+07:00\",\n  \"reason\": \"Air conditioner maintenance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0014 Admin Gets Closures",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"count is 1\", () => pm.expect(pm.response.json().count).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "closures"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0015 Admin Updates Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endTime\": \"{{day1}}T13:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0016 Alice Reserves in Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message includes \\\"is closed from\\\"\", () => pm.expect(pm.response.json().message).to.include(\"is closed from\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T10:00:00+07:00\",\n  \"endTime\": \"{{day1}}T11:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0017 Alice Reserves",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"aliceResvId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T14:00:00+07:00\",\n  \"endTime\": \"{{day1}}T16:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0018 Alice Edits Into Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message includes \\\"is closed from\\\"\", () => pm.expect(pm.response.json().message).to.include(\"is closed from\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{aliceResvId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{aliceResvId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T12:00:00+07:00\",\n  \"endTime\": \"{{day1}}T16:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0019 Admin Closes Over Alice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message includes \\\"1 reservation overlaps this closure period\\\"\", () => pm.expect(pm.response.json().message).to.include(\"1 reservation overlaps this closure period\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "closures"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T15:00:00+07:00\",\n  \"endTime\": \"{{day1}}T17:00:00+07:00\",\n  \"reason\": \"Deep cleaning\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0020 Admin Sets Capacity 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"capacity is 1\", () => pm.expect(pm.response.json().data.capacity).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}",
               "host": [
@@ -2585,12 +1090,573 @@
                   "type": "string"
                 }
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0021 Bob Reserves Full Slot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message includes \\\"(capacity 1)\\\"\", () => pm.expect(pm.response.json().message).to.include(\"(capacity 1)\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bobToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T14:00:00+07:00\",\n  \"endTime\": \"{{day1}}T16:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0022 Admin Edits Alice's (Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{aliceResvId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{aliceResvId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T15:00:00+07:00\",\n  \"endTime\": \"{{day1}}T17:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0023 Admin Force-Closes (Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"1 reservation is canceled\", () => pm.expect(pm.response.json().canceledReservations).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "closures"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day1}}T14:00:00+07:00\",\n  \"endTime\": \"{{day1}}T18:00:00+07:00\",\n  \"reason\": \"Water leak\",\n  \"force\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0024 Admin Deletes Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "response": []
         }
-      ],
-      "description": "Deletes the space with its reservations, closures, reviews and waitlist entries. The API has no route that deletes a user, so the three demo users stay."
+      ]
+    },
+    {
+      "name": "3. Waitlist Management",
+      "description": "Users join the waitlist of a full slot. Bob views and leaves the entry. When the admin cancels, Alice (first on the waitlist) gets the reservation and an email.",
+      "item": [
+        {
+          "name": "0025 Admin Fills Slot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"adminResvId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day2}}T10:00:00+07:00\",\n  \"endTime\": \"{{day2}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0026 Alice Joins Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "waitlist"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day2}}T10:00:00+07:00\",\n  \"endTime\": \"{{day2}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0027 Bob Joins Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"bobWaitlistId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceId}}/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceId}}",
+                "waitlist"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bobToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day2}}T10:00:00+07:00\",\n  \"endTime\": \"{{day2}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0028 Bob Gets Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"count is 1\", () => pm.expect(pm.response.json().count).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "waitlist"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bobToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0029 Bob Leaves Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/waitlist/{{bobWaitlistId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "waitlist",
+                "{{bobWaitlistId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bobToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0030 Admin Cancels (Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{adminResvId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{adminResvId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "0031 Alice Gets Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Alice has the reservation from the waitlist\", () => {",
+                  "  const want = new Date(pm.collectionVariables.get(\"day2\") + \"T10:00:00+07:00\").getTime();",
+                  "  pm.expect(pm.response.json().data.some((r) => new Date(r.startTime).getTime() === want)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{aliceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

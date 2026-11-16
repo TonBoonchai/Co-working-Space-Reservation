@@ -140,12 +140,13 @@ The review folders make a reservation that ends a few seconds after it starts, a
 
 ### Extra requirements demo
 
-[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video. It has one folder for each extra requirement, in the order of [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md). Each request name starts with a 4-digit number in the run order, such as `0008 Alice Reviews`. Most names then give the actor: Admin, Alice or Bob. A name with no actor is a public request. The collection keeps one token for each actor.
+[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video of about 2 minutes. It shows each extra requirement once. It has one folder for each group in [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md), in the same order. Notification Management does not have a folder: a request whose name ends with `(Email)` makes the server send an email to Alice. Each request name starts with a 4-digit number in the run order, such as `0007 Alice Reviews`. Most names then give the actor: Admin, Alice or Bob. A name with no actor is a public request. The collection keeps one token for each actor.
 
 To run the demo:
 
 1. Run `npm run demo:reset`. The script connects to MongoDB directly ([`tests/demo-reset.js`](tests/demo-reset.js)). It deletes the users named `Demo Admin`, `Demo Alice` and `Demo Bob`, and the spaces whose name starts with `Demo Co-Work Hub`, with all their reservations, closures, reviews and waitlist entries.
-2. Send the requests from top to bottom with the same environment. `0. Setup` registers the 3 demo users and creates the space `Demo Co-Work Hub`.
+2. Send `0. Setup` before you record. It registers the 3 demo users and creates the space `Demo Co-Work Hub`.
+3. Record the other requests from top to bottom with the same environment (27 requests). At the end, show the 3 emails to Alice.
 
 Run the reset again before each run. Without it, `0. Setup` fails because the emails are already registered.
 
