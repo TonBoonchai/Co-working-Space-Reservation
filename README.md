@@ -152,7 +152,7 @@ Run the reset again before each run. Without it, `0. Setup` fails because the em
 
 The demo emails are `demo-admin@coworking.test`, `demo-alice@coworking.test` and `demo-bob@coworking.test`, where real email cannot arrive. To get the emails in real inboxes, set the collection variables `adminEmail`, `aliceEmail` and `bobEmail` to real addresses. Gmail plus-addresses, such as `you+alice@gmail.com` and `you+bob@gmail.com`, put all the emails into one inbox. The reset finds the demo users by name, not by email, so it needs no email settings. A real address must not belong to a different account, because the reset does not delete that account.
 
-For a video that explains the code, [`docs/extra-requirements-implementation.md`](docs/extra-requirements-implementation.md) gives a short summary of how each extra requirement works, with links to the code.
+[`docs/extra-requirements-implementation.md`](docs/extra-requirements-implementation.md) gives a short summary of how each extra requirement works, with links to the code.
 
 ### Presentation steps → Postman folders
 

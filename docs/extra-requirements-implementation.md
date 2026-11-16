@@ -1,17 +1,6 @@
 # How the Extra Requirements Work
 
-A short guide for a 5-minute video. Each section gives the idea, then the code to show.
-
-## Suggested timing
-
-| Part | Time |
-|---|---|
-| Two shared parts: overlap filter and space lock | 0:45 |
-| Review management | 0:50 |
-| Closure and force closure | 1:00 |
-| Capacity | 0:40 |
-| Notifications | 0:45 |
-| Waitlist | 1:00 |
+Each section gives a brief summary of the implementation, with links to the code.
 
 ## 1. Two shared parts
 
