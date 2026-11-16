@@ -3631,6 +3631,109 @@
       ]
     },
     {
+      "name": "17 Google Login (OAuth 2.0)",
+      "item": [
+        {
+          "name": "Start Google Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 302 to Google when GOOGLE_* is set in config.env, 503 when it is not set",
+                  "pm.test(\"Status code is 302 or 503\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([302, 503]);",
+                  "});",
+                  "if (pm.response.code === 302) {",
+                  "  pm.test(\"Redirects to Google with state and PKCE\", function () {",
+                  "    const location = pm.response.headers.get(\"Location\");",
+                  "    pm.expect(location).to.include(\"https://accounts.google.com/o/oauth2/v2/auth\");",
+                  "    pm.expect(location).to.include(\"state=\");",
+                  "    pm.expect(location).to.include(\"code_challenge_method=S256\");",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/auth/google",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google"
+              ]
+            },
+            "description": "Starts the Google login. Open this URL in a browser to log in with a Google account. The first login registers the user.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "Google Callback - No Login Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"success is false\", function () {",
+                  "  pm.expect(pm.response.json().success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/auth/google/callback?code=fake-code&state=fake-state",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "fake-code"
+                },
+                {
+                  "key": "state",
+                  "value": "fake-state"
+                }
+              ]
+            },
+            "description": "A callback without the state cookie of a login attempt is rejected.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "99 Cleanup",
       "description": "Deletes the demo co-working spaces (their reservations, closures and reviews are deleted with them).",
       "item": [

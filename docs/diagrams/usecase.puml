@@ -14,6 +14,7 @@ actor "Admin" as admin
 rectangle "Co-working Space Reservation System" {
   usecase "Register\n(name, Thai tel,\nemail, password)" as register
   usecase "Log in" as login
+  usecase "Log in with Google\n(registers on\nthe first login)" as googleLogin
   usecase "Log out" as logout
   usecase "View\nCo-working Spaces" as viewSpaces
   usecase "View\nClosure Periods" as viewClosures
@@ -28,6 +29,7 @@ rectangle "Co-working Space Reservation System" {
 
 user -- register
 user -- login
+user -- googleLogin
 user -- logout
 user -- viewSpaces
 user -- viewClosures
@@ -56,6 +58,12 @@ note right of review
   Only after one of the user's own
   reservations at the space ends.
   One review per reservation.
+end note
+
+note right of googleLogin
+  OAuth 2.0. No telephone number
+  and no password. Rejected when the
+  email is registered with a password.
 end note
 
 note left of manageClosures

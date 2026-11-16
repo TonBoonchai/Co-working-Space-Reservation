@@ -27,6 +27,12 @@ package "Co-working Space Reservation" <<Frame>> {
   class "Login" as Login <<Resource>> {
     <<POST>> +login(): User
   }
+  class "GoogleLogin" as GoogleLogin <<Resource>> {
+    <<GET>> +googleLogin(): void
+  }
+  class "GoogleCallback" as GoogleCallback <<Resource>> {
+    <<GET>> +googleCallback(): User
+  }
   class "Me" as Me <<Resource>> {
     <<GET>> +getMe(): User
   }
@@ -95,6 +101,7 @@ package "Co-working Space Reservation" <<Frame>> {
     -tel
     -email
     -password
+    -googleId
     -role
     -createdAt
   }
@@ -135,6 +142,8 @@ package "Co-working Space Reservation" <<Frame>> {
   App ..> Auth : "/auth\n<<Path>>"
   Auth ..> Register : "/register\n<<Path>>"
   Auth ..> Login : "/login\n<<Path>>"
+  Auth ..> GoogleLogin : "/google\n<<Path>>"
+  GoogleLogin ..> GoogleCallback : "/callback\n<<Path>>"
   Auth ..> Me : "/me\n<<Path>>"
   Auth ..> Logout : "/logout\n<<Path>>"
 
@@ -156,6 +165,7 @@ package "Co-working Space Reservation" <<Frame>> {
 
   Register ..> UserRep : <<use>>
   Login ..> UserRep : <<use>>
+  GoogleCallback ..> UserRep : <<use>>
   Me ..> UserRep : <<use>>
   Spaces ..> SpaceRep : <<use>>
   Space ..> SpaceRep : <<use>>

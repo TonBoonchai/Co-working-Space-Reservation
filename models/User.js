@@ -3,6 +3,11 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { THAI_PHONE_REGEX, THAI_PHONE_MESSAGE } = require("../utils/validators");
 
+// A user who registered with an email and a password, not with Google
+function isLocalAccount() {
+  return !this.googleId;
+}
+
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -10,7 +15,8 @@ const UserSchema = new mongoose.Schema({
   },
   tel: {
     type: String,
-    required: [true, "Please add a telephone number"],
+    // A Google account does not give a telephone number
+    required: [isLocalAccount, "Please add a telephone number"],
     trim: true,
     match: [THAI_PHONE_REGEX, THAI_PHONE_MESSAGE],
   },
@@ -30,9 +36,16 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, "Please add a password"],
+    // A Google account has no password
+    required: [isLocalAccount, "Please add a password"],
     minlength: 6,
     select: false,
+  },
+  // The Google "sub" of a user who logs in with Google
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,

@@ -7,7 +7,7 @@ Term project #6 for **2110503 Software Development Practice**: a REST API that l
 **Functional**
 
 1. A user registers with a name, telephone number (Thai format), email and password.
-2. A registered user logs in with email and password, and can log out.
+2. A registered user logs in with email and password, and can log out. A user can also log in with a Google account, and the first Google login registers the user.
 3. After logging in, a user can reserve up to **3** times by choosing a date (with a start and end time) and a co-working space. The co-working space list is provided; each space has a name, address, telephone number, open-close time and capacity.
 4. A user can view, edit and delete **their own** reservations.
 5. An admin can view, edit and delete **any** reservation.
@@ -18,7 +18,7 @@ Term project #6 for **2110503 Software Development Practice**: a REST API that l
 
 ## Tech stack
 
-Node.js, Express 5, MongoDB Atlas with Mongoose, JWT (`jsonwebtoken`), `bcryptjs`, `cookie-parser`, and Postman/Newman for testing.
+Node.js, Express 5, MongoDB Atlas with Mongoose, JWT (`jsonwebtoken`), `bcryptjs`, `cookie-parser`, Google OAuth 2.0 (with the built-in `fetch`, no extra package), and Postman/Newman for testing.
 
 ## Getting started
 
@@ -30,6 +30,17 @@ npm run dev                                       # http://localhost:5050
 
 `config/config.env` is gitignored. Never commit it.
 
+### Google login (optional)
+
+Google login needs an OAuth client from Google. Without one, the Google routes return 503 and the other routes work as usual.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type **Web application**.
+2. Add `http://localhost:5050/api/v1/auth/google/callback` as an authorized redirect URI.
+3. Copy the client ID and the client secret into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `config/config.env`.
+4. Set `GOOGLE_CALLBACK_URL` to the same redirect URI.
+5. Restart the server.
+6. Open `http://localhost:5050/api/v1/auth/google` in a browser. The browser shows the token response after the login.
+
 ## API
 
 Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Bearer <token>`.
@@ -38,6 +49,8 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 |---|---|---|---|
 | POST | `/auth/register` | Public | Register (`name`, `tel`, `email`, `password`, optional `role`) |
 | POST | `/auth/login` | Public | Log in, returns a token and sets a `token` cookie |
+| GET | `/auth/google` | Public | Start a Google login (redirects to Google). Open it in a browser |
+| GET | `/auth/google/callback` | Public | Google redirects here. Registers the user on the first login, then returns a token and sets a `token` cookie, like `/auth/login` |
 | GET | `/auth/me` | Private | Current user |
 | GET | `/auth/logout` | Public | Clear the token cookie |
 | GET | `/coworkingspaces` | Public | List spaces (supports `select`, `sort`, `page`, `limit`, `gt/gte/lt/lte/in` filters) |
@@ -95,6 +108,7 @@ Example review body:
 - **Closure:** a period when one space is closed, for example for maintenance. The end must be later than the start. A closure must not overlap a reservation at its space (the error gives the number of reservations). A `PUT` cannot move a closure to a different space. Two periods overlap only when one starts before the other ends, so periods that only touch (12:00-12:00) are allowed. The overlap rules apply to admins too. The overlap check and the write run in one MongoDB transaction that locks the space, so two requests at the same time cannot create an overlap.
 - **Review:** only the owner of a reservation can review it, and only after the reservation ends. A reservation can have one review. The rating is a whole number from 1 to 5, and the comment is required (at most 1000 characters). The space comes from the reservation. Only the admin can delete a review. A review stays when its reservation is deleted. A review shows only the reviewer's name.
 - **Rating of a space:** each space has `averageRating` (rounded to 2 decimals, `null` when there are no reviews) and `reviewCount`. The API calculates them again after each review create or delete, under the same space lock as the closure checks. A client cannot set them in a space `POST` or `PUT`.
+- **Google login:** uses the OAuth 2.0 authorization code flow with PKCE (a one-time proof that the same server started and finished the login). A `state` value in a short-lived httpOnly cookie protects the callback against cross-site requests. The Google account must have a verified email. The first login creates a user with the Google name and email, the role `user`, and no telephone number or password. A later login finds the user by the Google account ID (`googleId`). A Google login is rejected (409) when its email is already registered with a password, because this API does not verify emails. A Google user cannot log in with `/auth/login`.
 - **Ownership:** a user can only view, edit or delete their own reservations (401 otherwise). An edit can never change who owns a reservation.
 - **Thai telephone numbers** (users and spaces, dashes optional):
   - mobile `081-234-5678` / `0812345678`
@@ -113,7 +127,9 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 77 requests, 139 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 79 requests, 142 assertions, all passing (without the Google settings in `config/config.env`).
+
+The Google login folder cannot log in to Google. It checks that `/auth/google` redirects to Google (or returns 503 when Google login is not configured), and that the callback rejects a request without a login attempt.
 
 The review folders make a reservation that ends a few seconds after it starts, and wait for it to end. A reservation must start and end on the same day, so these folders fail near midnight Bangkok time.
 
@@ -145,6 +161,7 @@ The review folders make a reservation that ends a few seconds after it starts, a
 | 14+ | Check Review Conditions | `14+ Check Review Conditions` |
 | 15 | Admin Manage Reviews | `15 Admin Manage Reviews` |
 | 16 | Admin Set Capacity | `16 Admin Set Capacity` |
+| 17 | User Log-in with Google | `17 Google Login (OAuth 2.0)` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -153,7 +170,7 @@ PlantUML sources are in [`docs/diagrams/`](docs/diagrams/), and rendered PNGs ar
 
 - Use case: [`usecase.png`](docs/diagrams/png/usecase.png)
 - Class diagram (UML Profile for REST): [`class.png`](docs/diagrams/png/class.png)
-- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png), [create review](docs/diagrams/png/10-create-review.png)
+- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png), [create review](docs/diagrams/png/10-create-review.png), [Google login](docs/diagrams/png/11-google-login.png)
 
 To re-render, use the PlantUML VS Code extension, or run `java -jar plantuml.jar -tpng docs/diagrams/**/*.puml`.
 
@@ -166,6 +183,7 @@ The first commit is VacQ as it was, so `git diff` against it (or the pull reques
 | Resources | `Hospital`, `Appointment` | `CoworkingSpace` (name, address, tel, openTime, closeTime, capacity), `Reservation` (startTime, endTime) |
 | Routes | `/hospitals`, `/appointments` | `/coworkingspaces`, `/reservations`, nested `/coworkingspaces/:id/reservations` |
 | Registration | name, email, password | adds required **Thai telephone number**; errors explain what is wrong (invalid tel, duplicate email) |
+| Login | email and password | also **Google login** (OAuth 2.0), which registers the user on the first login |
 | Create rules | max 3 appointments | max 3, plus future start, end after start, same day, within open-close hours |
 | View single | any logged-in user could read any appointment | owner or admin only |
 | Update | whole body applied (could change the owner) | only `startTime` / `endTime` / `coworkingSpace`, re-validated |

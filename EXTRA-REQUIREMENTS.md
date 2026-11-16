@@ -19,4 +19,4 @@ Note: IDs are for verbal referencing only. Do not persist them anywhere. Do not 
 
 ## Authentication
 
-- \[ \] AU-1 The system shall allow unregistered user to use OAuth2 login flow as an alternative way to authenticate.
+- \[x\] AU-1 The system shall allow unregistered user to use OAuth2 login flow as an alternative way to authenticate.
