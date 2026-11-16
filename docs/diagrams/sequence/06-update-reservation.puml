@@ -44,11 +44,20 @@ else owner or admin
     alt closure overlaps the new time / space
       ctrl --> client : 400 "<space> is closed from\n<start> to <end> (<reason>)"
     else space open
-      ctrl -> model ++ : reservation.save()
+      ctrl -> model ++ : find(overlapFilter(coworkingSpace,\nstartTime, endTime), _id != id)
       model -> db ++ : ReservationSchema
-      db --> model -- : updated reservation
-      model --> ctrl -- : reservation
-      ctrl --> client : 200 {success:true, data: reservation}
+      db --> model -- : overlapping reservations
+      model --> ctrl -- : overlapping reservations
+      ctrl -> ctrl : peakOverlap(reservations, startTime, endTime)
+      alt peak >= coworkingSpace.capacity
+        ctrl --> client : 400 "<space> is full at\n<time> (capacity <n>)"
+      else space not full
+        ctrl -> model ++ : reservation.save()
+        model -> db ++ : ReservationSchema
+        db --> model -- : updated reservation
+        model --> ctrl -- : reservation
+        ctrl --> client : 200 {success:true, data: reservation}
+      end
     end
   end
 end

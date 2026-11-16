@@ -33,6 +33,16 @@ const CoworkingSpaceSchema = new mongoose.Schema({
     required: [true, "Please add a close time"],
     match: [TIME_HHMM_REGEX, "Close time must be in HH:mm format (e.g. 20:00)"],
   },
+  // The maximum number of reservations that can overlap at the same time
+  capacity: {
+    type: Number,
+    required: [true, "Please add a capacity"],
+    min: [1, "Capacity must be at least 1"],
+    validate: {
+      validator: Number.isInteger,
+      message: "Capacity must be a whole number",
+    },
+  },
   // Written only by utils/spaceRating.js, after each review change.
   // averageRating is null when the space has no reviews.
   averageRating: {

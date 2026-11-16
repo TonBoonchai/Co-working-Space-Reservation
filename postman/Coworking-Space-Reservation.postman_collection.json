@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Co-working Space Reservation",
-    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-15).",
+    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-16).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -126,10 +126,10 @@
                 "coworkingspaces"
               ]
             },
-            "description": "Admin only. Open 08:00-20:00.",
+            "description": "Admin only. Open 08:00-20:00. Capacity 2.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Siam Co-Work Hub #{{runId}}\",\n  \"address\": \"254 Phayathai Rd, Pathum Wan, Bangkok 10330\",\n  \"tel\": \"02-123-4567\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\"\n}",
+              "raw": "{\n  \"name\": \"Siam Co-Work Hub #{{runId}}\",\n  \"address\": \"254 Phayathai Rd, Pathum Wan, Bangkok 10330\",\n  \"tel\": \"02-123-4567\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\",\n  \"capacity\": 2\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -174,10 +174,10 @@
                 "coworkingspaces"
               ]
             },
-            "description": "Admin only. Open 09:00-18:00.",
+            "description": "Admin only. Open 09:00-18:00. Capacity 2.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Nimman Desk Space #{{runId}}\",\n  \"address\": \"45 Nimmanhaemin Rd, Mueang, Chiang Mai 50200\",\n  \"tel\": \"053-123-456\",\n  \"openTime\": \"09:00\",\n  \"closeTime\": \"18:00\"\n}",
+              "raw": "{\n  \"name\": \"Nimman Desk Space #{{runId}}\",\n  \"address\": \"45 Nimmanhaemin Rd, Mueang, Chiang Mai 50200\",\n  \"tel\": \"053-123-456\",\n  \"openTime\": \"09:00\",\n  \"closeTime\": \"18:00\",\n  \"capacity\": 2\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2841,10 +2841,10 @@
                 "coworkingspaces"
               ]
             },
-            "description": "Admin only. Open 00:00-23:59, so a reservation can start a few seconds from now.",
+            "description": "Admin only. Open 00:00-23:59, so a reservation can start a few seconds from now. Capacity 1.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ari Review Lounge #{{runId}}\",\n  \"address\": \"9 Phahonyothin Rd, Phaya Thai, Bangkok 10400\",\n  \"tel\": \"02-987-6543\",\n  \"openTime\": \"00:00\",\n  \"closeTime\": \"23:59\"\n}",
+              "raw": "{\n  \"name\": \"Ari Review Lounge #{{runId}}\",\n  \"address\": \"9 Phahonyothin Rd, Phaya Thai, Bangkok 10400\",\n  \"tel\": \"02-987-6543\",\n  \"openTime\": \"00:00\",\n  \"closeTime\": \"23:59\",\n  \"capacity\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3468,6 +3468,567 @@
               ]
             },
             "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Admin Set Capacity",
+      "description": "The admin (still logged in from step 9) sets the capacity of Space A. The capacity is the maximum number of reservations that can overlap at the same time. A new or edited reservation is rejected when the space is full at any time during it.",
+      "item": [
+        {
+          "name": "Create Space - No Capacity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message explains the error\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"Please add a capacity\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"No Capacity Space #{{runId}}\",\n  \"address\": \"1 Test Rd, Bangkok 10330\",\n  \"tel\": \"02-123-4567\",\n  \"openTime\": \"08:00\",\n  \"closeTime\": \"20:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Capacity - Zero",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message explains the error\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"Capacity must be at least 1\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Capacity of Space A to 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"capacity is 1\", function () {",
+                  "  pm.expect(pm.response.json().data.capacity).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation - Fills Space A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"capResv1Id\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "09:00-12:00. Space A is now full from 09:00 to 12:00.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T09:00:00+07:00\",\n  \"endTime\": \"{{day4}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation - Space Full",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message names the full time and the capacity\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"is full at \" + pm.environment.get(\"day4\") + \" 11:00 (capacity 1)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "11:00-13:00 overlaps the 09:00-12:00 reservation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T11:00:00+07:00\",\n  \"endTime\": \"{{day4}}T13:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation - Starts When Other Ends",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"capResv2Id\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "12:00-14:00 only touches 09:00-12:00, so it is allowed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T12:00:00+07:00\",\n  \"endTime\": \"{{day4}}T14:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Reservation - Into Full Time",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message names the full time and the capacity\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"is full at \" + pm.environment.get(\"day4\") + \" 11:00 (capacity 1)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{capResv2Id}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{capResv2Id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T11:00:00+07:00\",\n  \"endTime\": \"{{day4}}T13:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Reservation - Inside Own Time",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{capResv2Id}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{capResv2Id}}"
+              ]
+            },
+            "description": "The reservation that is edited does not count against the capacity.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T12:30:00+07:00\",\n  \"endTime\": \"{{day4}}T14:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Capacity of Space A to 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"capacity is 2\", function () {",
+                  "  pm.expect(pm.response.json().data.capacity).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation - Overlaps Two, Not at Once",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "10:00-13:30 overlaps 09:00-12:00 and 12:30-14:00, but these two do not overlap each other. At most 2 reservations are active at the same time.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T10:00:00+07:00\",\n  \"endTime\": \"{{day4}}T13:30:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation - Space Full at 11:00",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message names the full time and the capacity\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"is full at \" + pm.environment.get(\"day4\") + \" 11:00 (capacity 2)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "09:00-12:00 and 10:00-13:30 are both active at 11:00.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T11:00:00+07:00\",\n  \"endTime\": \"{{day4}}T12:45:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]
