@@ -8,7 +8,7 @@ Term project #6 for **2110503 Software Development Practice**: a REST API that l
 
 1. A user registers with a name, telephone number (Thai format), email and password.
 2. A registered user logs in with email and password, and can log out.
-3. After logging in, a user can reserve up to **3** times by choosing a date (with a start and end time) and a co-working space. The co-working space list is provided; each space has a name, address, telephone number and open-close time.
+3. After logging in, a user can reserve up to **3** times by choosing a date (with a start and end time) and a co-working space. The co-working space list is provided; each space has a name, address, telephone number, open-close time and capacity.
 4. A user can view, edit and delete **their own** reservations.
 5. An admin can view, edit and delete **any** reservation.
 
@@ -42,8 +42,8 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/auth/logout` | Public | Clear the token cookie |
 | GET | `/coworkingspaces` | Public | List spaces (supports `select`, `sort`, `page`, `limit`, `gt/gte/lt/lte/in` filters) |
 | GET | `/coworkingspaces/:id` | Public | One space |
-| POST | `/coworkingspaces` | Admin | Create a space |
-| PUT | `/coworkingspaces/:id` | Admin | Update a space |
+| POST | `/coworkingspaces` | Admin | Create a space (`name`, `address`, `tel`, `openTime`, `closeTime`, `capacity`) |
+| PUT | `/coworkingspaces/:id` | Admin | Update a space, for example its `capacity` |
 | DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations, its closures and its reviews |
 | POST | `/coworkingspaces/:coworkingSpaceId/reservations` | User/Admin | Create a reservation (`startTime`, `endTime`) |
 | GET | `/coworkingspaces/:coworkingSpaceId/reservations` | Private | Reservations at one space (own only for users) |
@@ -63,6 +63,12 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/reviews` | Public | All reviews, with the reviewer name and the space |
 | GET | `/reviews/:id` | Public | One review |
 | DELETE | `/reviews/:id` | Admin | Delete a review |
+
+Example co-working space body:
+
+```json
+{ "name": "Siam Co-Work Hub", "address": "254 Phayathai Rd, Pathum Wan, Bangkok 10330", "tel": "02-123-4567", "openTime": "08:00", "closeTime": "20:00", "capacity": 20 }
+```
 
 Example reservation body (times are Bangkok time):
 
@@ -84,7 +90,8 @@ Example review body:
 
 ### Rules and validation
 
-- **Reservation:** must start in the future, end after it starts, start and end on the same day, and fit inside the space's `openTime`-`closeTime`. It must not overlap a closure of its space. A general user can hold at most 3 reservations; admins have no limit.
+- **Reservation:** must start in the future, end after it starts, start and end on the same day, and fit inside the space's `openTime`-`closeTime`. It must not overlap a closure of its space, and the space must not be full at any time during it. A general user can hold at most 3 reservations; admins have no limit.
+- **Capacity:** the maximum number of reservations at one space that can overlap at the same time. It is a whole number, at least 1, and it is required when a space is created. A space is full at a time when that many reservations are active. A new or edited reservation is rejected when the space is full at any time during it (the error gives the first full time). An edited reservation does not count against its own capacity. Reservations that only touch (12:00-12:00) do not overlap. A lower capacity does not change the reservations that already exist. The check and the write run under the same space lock as the closure checks.
 - **Closure:** a period when one space is closed, for example for maintenance. The end must be later than the start. A closure must not overlap a reservation at its space (the error gives the number of reservations). A `PUT` cannot move a closure to a different space. Two periods overlap only when one starts before the other ends, so periods that only touch (12:00-12:00) are allowed. The overlap rules apply to admins too. The overlap check and the write run in one MongoDB transaction that locks the space, so two requests at the same time cannot create an overlap.
 - **Review:** only the owner of a reservation can review it, and only after the reservation ends. A reservation can have one review. The rating is a whole number from 1 to 5, and the comment is required (at most 1000 characters). The space comes from the reservation. Only the admin can delete a review. A review stays when its reservation is deleted. A review shows only the reviewer's name.
 - **Rating of a space:** each space has `averageRating` (rounded to 2 decimals, `null` when there are no reviews) and `reviewCount`. The API calculates them again after each review create or delete, under the same space lock as the closure checks. A client cannot set them in a space `POST` or `PUT`.
@@ -106,7 +113,7 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 74 requests, 134 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 77 requests, 139 assertions, all passing.
 
 The review folders make a reservation that ends a few seconds after it starts, and wait for it to end. A reservation must start and end on the same day, so these folders fail near midnight Bangkok time.
 
@@ -137,6 +144,7 @@ The review folders make a reservation that ends a few seconds after it starts, a
 | 14 | User Review Co-working Space | `14 User Review Co-working Space` |
 | 14+ | Check Review Conditions | `14+ Check Review Conditions` |
 | 15 | Admin Manage Reviews | `15 Admin Manage Reviews` |
+| 16 | Admin Set Capacity | `16 Admin Set Capacity` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -155,7 +163,7 @@ The first commit is VacQ as it was, so `git diff` against it (or the pull reques
 
 | Area | VacQ | This project |
 |---|---|---|
-| Resources | `Hospital`, `Appointment` | `CoworkingSpace` (name, address, tel, openTime, closeTime), `Reservation` (startTime, endTime) |
+| Resources | `Hospital`, `Appointment` | `CoworkingSpace` (name, address, tel, openTime, closeTime, capacity), `Reservation` (startTime, endTime) |
 | Routes | `/hospitals`, `/appointments` | `/coworkingspaces`, `/reservations`, nested `/coworkingspaces/:id/reservations` |
 | Registration | name, email, password | adds required **Thai telephone number**; errors explain what is wrong (invalid tel, duplicate email) |
 | Create rules | max 3 appointments | max 3, plus future start, end after start, same day, within open-close hours |

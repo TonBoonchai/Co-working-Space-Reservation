@@ -52,11 +52,20 @@ else token OK
         alt not admin and count >= 3
           ctrl --> client : 400 "The user with ID ... has\nalready made 3 reservations"
         else allowed
-          ctrl -> model ++ : create({startTime, endTime,\nuser: req.user.id, coworkingSpace})
+          ctrl -> model ++ : find(overlapFilter(coworkingSpace,\nstartTime, endTime))
           model -> db ++ : ReservationSchema
-          db --> model -- : reservation
-          model --> ctrl -- : reservation
-          ctrl --> client : 201 {success:true, data: reservation}
+          db --> model -- : overlapping reservations
+          model --> ctrl -- : overlapping reservations
+          ctrl -> ctrl : peakOverlap(reservations, startTime, endTime)
+          alt peak >= coworkingSpace.capacity
+            ctrl --> client : 400 "<space> is full at\n<time> (capacity <n>)"
+          else space not full
+            ctrl -> model ++ : create({startTime, endTime,\nuser: req.user.id, coworkingSpace})
+            model -> db ++ : ReservationSchema
+            db --> model -- : reservation
+            model --> ctrl -- : reservation
+            ctrl --> client : 201 {success:true, data: reservation}
+          end
         end
       end
     end

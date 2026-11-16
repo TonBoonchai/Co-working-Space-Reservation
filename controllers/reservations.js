@@ -4,6 +4,7 @@ const Closure = require("../models/Closure");
 const sendError = require("../utils/sendError");
 const { overlapFilter } = require("../utils/overlap");
 const { withSpaceLock } = require("../utils/spaceLock");
+const { findCapacityConflict } = require("../utils/capacity");
 const {
   checkReservationTime,
   formatBangkok,
@@ -151,17 +152,24 @@ exports.addReservation = async (req, res, next) => {
       }
     }
 
-    // The space must not be closed at any time during the reservation.
-    // The check and the create run under one lock (see utils/spaceLock.js).
+    // The space must not be closed or full at any time during the reservation.
+    // The checks and the create run under one lock (see utils/spaceLock.js).
     const result = await withSpaceLock(coworkingSpace._id, async (session) => {
-      const closureError = await findClosureConflict(
-        coworkingSpace,
-        startTime,
-        endTime,
-        session,
-      );
+      const conflict =
+        (await findClosureConflict(
+          coworkingSpace,
+          startTime,
+          endTime,
+          session,
+        )) ??
+        (await findCapacityConflict(
+          coworkingSpace,
+          startTime,
+          endTime,
+          session,
+        ));
 
-      if (closureError) return { error: closureError };
+      if (conflict) return { error: conflict };
 
       const [reservation] = await Reservation.create(
         [
@@ -233,17 +241,26 @@ exports.updateReservation = async (req, res, next) => {
       return res.status(400).json({ success: false, message: timeError });
     }
 
-    // The new space must not be closed at any time during the reservation.
-    // The check and the save run under one lock on the new space.
-    const closureError = await withSpaceLock(
+    // The new space must not be closed or full at any time during the
+    // reservation. This reservation does not count against the capacity.
+    // The checks and the save run under one lock on the new space.
+    const conflictError = await withSpaceLock(
       coworkingSpace._id,
       async (session) => {
-        const conflict = await findClosureConflict(
-          coworkingSpace,
-          startTime,
-          endTime,
-          session,
-        );
+        const conflict =
+          (await findClosureConflict(
+            coworkingSpace,
+            startTime,
+            endTime,
+            session,
+          )) ??
+          (await findCapacityConflict(
+            coworkingSpace,
+            startTime,
+            endTime,
+            session,
+            reservation._id,
+          ));
 
         if (conflict) return conflict;
 
@@ -255,8 +272,8 @@ exports.updateReservation = async (req, res, next) => {
       },
     );
 
-    if (closureError) {
-      return res.status(400).json({ success: false, message: closureError });
+    if (conflictError) {
+      return res.status(400).json({ success: false, message: conflictError });
     }
 
     await reservation.populate(populateSpace);

@@ -14,3 +14,9 @@ Note: IDs are for verbal referencing only. Do not persist them anywhere. Do not 
 - \[x\] SM-1 The system shall allow the admin to create/read/update/delete closure periods for a co-working space (e.g., for maintenance)
 - \[x\] SM-2 The system shall reject new reservations or edits to existing reservations that overlap a closure period.
 - \[x\] SM-3 The system shall reject new closure periods that overlap with existing reservations.
+- \[x\] SM-4 The system shall allow the admin to specify co-working space capacity.
+- \[x\] SM-5 The system shall reject new reservations if the co-working space is full.
+
+## Authentication
+
+- \[ \] AU-1 The system shall allow unregistered user to use OAuth2 login flow as an alternative way to authenticate.

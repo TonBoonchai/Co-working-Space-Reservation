@@ -46,6 +46,7 @@ const runRounds = async (email, created) => {
     tel: "02-123-4567",
     openTime: "08:00",
     closeTime: "20:00",
+    capacity: 1,
   });
   if (space.status !== 201) throw new Error(`create space: ${space.status}`);
   const spaceId = space.json.data._id;
