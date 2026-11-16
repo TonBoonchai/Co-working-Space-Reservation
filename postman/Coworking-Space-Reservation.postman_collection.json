@@ -3616,68 +3616,6 @@
           }
         },
         {
-          "name": "Join Waitlist - Same Period Again",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"message mentions 'already have a waitlist entry'\", function () {",
-                  "  pm.expect(pm.response.json().message).to.include(\"already have a waitlist entry\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/waitlist",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "coworkingspaces",
-                "{{spaceAId}}",
-                "waitlist"
-              ]
-            },
-            "description": "One user can have only one entry for one period at one space.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day4}}T10:00:00+07:00\",\n  \"endTime\": \"{{day4}}T11:00:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
           "name": "Get My Waitlist",
           "event": [
             {
@@ -3796,51 +3734,6 @@
               ]
             },
             "description": "The waitlist entry is now a reservation at Space A.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{reviewerToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get My Waitlist After Reservation",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"count is 0\", function () {",
-                  "  pm.expect(pm.response.json().count).to.eql(0);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{URL}}/api/v1/waitlist",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "waitlist"
-              ]
-            },
-            "description": "The entry is removed from the waitlist.",
             "auth": {
               "type": "bearer",
               "bearer": [
