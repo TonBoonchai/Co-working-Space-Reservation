@@ -913,6 +913,44 @@
       "description": "Reservations that break the rules are rejected with a reason.",
       "item": [
         {
+          "name": "Create - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'Please add a start time and an end time'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"Please add a start time and an end time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "The request has no body. Expect a 400 that names the missing fields."
+          }
+        },
+        {
           "name": "Create - Outside Opening Hours",
           "event": [
             {
@@ -2036,6 +2074,42 @@
           }
         },
         {
+          "name": "Update Closure - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Nothing changed\", function () {",
+                  "  pm.expect(pm.response.json().data.reason).to.eql(\"Air conditioner and network maintenance\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "The request has no body, so the closure keeps its values."
+          }
+        },
+        {
           "name": "Login User",
           "event": [
             {
@@ -2197,6 +2271,44 @@
                 }
               }
             }
+          }
+        },
+        {
+          "name": "Create Closure - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'Please add a start time and an end time'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"Please add a start time and an end time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "closures"
+              ]
+            },
+            "description": "The request has no body. Expect a 400 that names the missing fields."
           }
         },
         {
