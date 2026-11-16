@@ -5,17 +5,6 @@ const {
   TIME_HHMM_REGEX,
 } = require("../utils/validators");
 
-// The default Number cast turns true into 1, and false and " " into 0. That
-// makes a free space by mistake. Reject booleans. Treat a blank string as no
-// rate, so the "required" message shows. Cast all other values as usual.
-const castHourlyRate = (value) => {
-  if (typeof value === "boolean") {
-    throw new Error("Hourly rate must not be a boolean");
-  }
-  if (typeof value === "string" && value.trim() === "") return null;
-  return mongoose.Schema.Types.Number.cast()(value);
-};
-
 const CoworkingSpaceSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -48,13 +37,8 @@ const CoworkingSpaceSchema = new mongoose.Schema({
   hourlyRate: {
     type: Number,
     required: [true, "Please add an hourly rate (THB per hour)"],
-    cast: [castHourlyRate, "Hourly rate must be a number (THB per hour)"],
+    cast: "Hourly rate must be a number (THB per hour)",
     min: [0, "Hourly rate can not be less than 0 THB per hour"],
-    // Above this limit, JavaScript can not store every whole number exactly
-    max: [
-      Number.MAX_SAFE_INTEGER,
-      `Hourly rate can not be more than ${Number.MAX_SAFE_INTEGER} THB per hour`,
-    ],
     validate: {
       validator: Number.isInteger,
       message: "Hourly rate must be a whole number of Baht",
