@@ -4,8 +4,11 @@ const Reservation = require("../models/Reservation");
 const sendError = require("../utils/sendError");
 const { overlapFilter } = require("../utils/overlap");
 const { withSpaceLock } = require("../utils/spaceLock");
-const { formatBangkok } = require("../utils/reservationTime");
-const sendEmail = require("../utils/sendEmail");
+const { fillFromWaitlist } = require("../utils/waitlist");
+const {
+  notifyClosureCanceled,
+  notifyWaitlistGiven,
+} = require("../utils/notifications");
 
 const populateSpace = { path: "coworkingSpace", select: "name address" };
 
@@ -79,34 +82,6 @@ const cancelReservations = async (
   return canceled;
 };
 
-// Send one email to the owner of each canceled reservation.
-// Run it only after the transaction commits. The response does not wait for
-// the emails, and an email that fails does not undo the closure.
-const notifyCanceled = (canceled, spaceName, closure) => {
-  const closed =
-    `${formatBangkok(closure.startTime)} to ${formatBangkok(closure.endTime)}` +
-    (closure.reason ? ` (${closure.reason})` : "");
-
-  canceled.forEach((reservation) => {
-    const user = reservation.user;
-    if (!user?.email) return;
-
-    sendEmail({
-      to: user.email,
-      subject: `Your reservation at ${spaceName} is canceled`,
-      text:
-        `Hello ${user.name},\n\n` +
-        `Your reservation at ${spaceName} from ` +
-        `${formatBangkok(reservation.startTime)} to ` +
-        `${formatBangkok(reservation.endTime)} (Bangkok time) is canceled, ` +
-        `because the co-working space is closed from ${closed}.\n\n` +
-        `Please make a new reservation at a different time or space.\n`,
-    }).catch((err) =>
-      console.log(`Cannot send email to ${user.email}: ${err.message}`),
-    );
-  });
-};
-
 //@desc     Get all closures
 //@route    GET /api/v1/closures
 //@route    GET /api/v1/coworkingspaces/:coworkingSpaceId/closures
@@ -173,7 +148,8 @@ exports.addClosure = async (req, res, next) => {
 
     // A request with no body has req.body undefined in Express 5
     const { startTime, endTime, reason, force } = req.body ?? {};
-    const inputError = checkClosureTime(startTime, endTime) ?? checkForce(force);
+    const inputError =
+      checkClosureTime(startTime, endTime) ?? checkForce(force);
 
     if (inputError) {
       return res.status(400).json({ success: false, message: inputError });
@@ -208,14 +184,21 @@ exports.addClosure = async (req, res, next) => {
         [{ coworkingSpace: coworkingSpace._id, startTime, endTime, reason }],
         { session },
       );
-      return { closure, canceled };
+
+      // The canceled reservations free places outside the closure period too
+      const given =
+        canceled.length > 0
+          ? await fillFromWaitlist(coworkingSpace._id, session)
+          : [];
+      return { closure, canceled, given };
     });
 
     if (result.error) {
       return res.status(400).json({ success: false, message: result.error });
     }
 
-    notifyCanceled(result.canceled, coworkingSpace.name, result.closure);
+    notifyClosureCanceled(result.canceled, coworkingSpace.name, result.closure);
+    notifyWaitlistGiven(result.given);
 
     res.status(201).json({
       success: true,
@@ -282,7 +265,12 @@ exports.updateClosure = async (req, res, next) => {
         closure.endTime = endTime;
         if (body.reason !== undefined) closure.reason = body.reason;
         await closure.save({ session });
-        return { canceled };
+
+        const given =
+          canceled.length > 0
+            ? await fillFromWaitlist(closure.coworkingSpace, session)
+            : [];
+        return { canceled, given };
       },
     );
 
@@ -292,7 +280,12 @@ exports.updateClosure = async (req, res, next) => {
 
     await closure.populate(populateSpace);
 
-    notifyCanceled(result.canceled, closure.coworkingSpace.name, closure);
+    notifyClosureCanceled(
+      result.canceled,
+      closure.coworkingSpace.name,
+      closure,
+    );
+    notifyWaitlistGiven(result.given);
 
     res.status(200).json({
       success: true,

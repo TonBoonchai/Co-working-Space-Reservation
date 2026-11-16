@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Co-working Space Reservation",
-    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-17).",
+    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-20).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1790,7 +1790,7 @@
     },
     {
       "name": "11 Admin Edit Any Reservation",
-      "description": "",
+      "description": "The admin moves a user's reservation. The server sends an email to the user. Without SMTP_HOST in config.env, the server writes the email to its console.",
       "item": [
         {
           "name": "Update User's Reservation (Admin)",
@@ -1849,7 +1849,7 @@
     },
     {
       "name": "12 Admin Delete Any Reservation",
-      "description": "",
+      "description": "The admin deletes a user's reservation. The server sends an email to the user. Without SMTP_HOST in config.env, the server writes the email to its console.",
       "item": [
         {
           "name": "Delete User's Reservation (Admin)",
@@ -3247,7 +3247,8 @@
                 "exec": [
                   "pm.test(\"Status code is 201\", function () {",
                   "  pm.response.to.have.status(201);",
-                  "});"
+                  "});",
+                  "pm.environment.set(\"fullResvId\", pm.response.json().data._id);"
                 ]
               }
             }
@@ -3489,8 +3490,421 @@
       ]
     },
     {
+      "name": "18 User Join Waitlist",
+      "description": "Space A is full from 09:00 to 12:00 on day 4 (step 16). The reviewer from step 14 joins the waitlist for that period. A user can join a waitlist only when the space is full at some time in the period.",
+      "item": [
+        {
+          "name": "Join Waitlist - Space Not Full",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'is not full'\", function () {",
+                  "  pm.expect(pm.response.json().message).to.include(\"is not full\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "waitlist"
+              ]
+            },
+            "description": "14:00-15:00 has a free place, so the user must make a reservation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T14:00:00+07:00\",\n  \"endTime\": \"{{day4}}T15:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Join Waitlist on Full Space A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"waitlistId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "waitlist"
+              ]
+            },
+            "description": "10:00-11:00. Space A is full from 09:00 to 12:00.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T10:00:00+07:00\",\n  \"endTime\": \"{{day4}}T11:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"count is 1\", function () {",
+                  "  pm.expect(pm.response.json().count).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "waitlist"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Waitlist Gives Reservation",
+      "description": "The admin deletes the reservation that fills Space A. The first waitlist entry for the free period becomes a reservation, and the server sends an email to its user. Without SMTP_HOST in config.env, the server writes the email to its console.",
+      "item": [
+        {
+          "name": "Delete Reservation That Fills Space A (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{fullResvId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{fullResvId}}"
+              ]
+            },
+            "description": "The reservation from 'Create Reservation - Fills Space A' in step 16."
+          }
+        },
+        {
+          "name": "Get Reviewer's Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"has the 10:00-11:00 reservation at Space A\", function () {",
+                  "  const given = pm.response.json().data.find((r) => r.coworkingSpace._id === pm.environment.get(\"spaceAId\"));",
+                  "  pm.expect(given).to.exist;",
+                  "  pm.expect(new Date(given.startTime).toISOString()).to.eql(new Date(pm.environment.get(\"day4\") + \"T10:00:00+07:00\").toISOString());",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations"
+              ]
+            },
+            "description": "The waitlist entry is now a reservation at Space A.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 User Leave Waitlist",
+      "description": "The reviewer's new reservation fills Space A from 10:00 to 11:00. The reviewer joins the waitlist again, then leaves it.",
+      "item": [
+        {
+          "name": "Join Waitlist on Full Space A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"waitlistId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "waitlist"
+              ]
+            },
+            "description": "10:30-11:30. Space A is full from 10:30 to 11:00.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T10:30:00+07:00\",\n  \"endTime\": \"{{day4}}T11:30:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Leave Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/waitlist/{{waitlistId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "waitlist",
+                "{{waitlistId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Waitlist After Leave",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"count is 0\", function () {",
+                  "  pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/waitlist",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "waitlist"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{reviewerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "99 Cleanup",
-      "description": "Deletes the demo co-working spaces (their reservations, closures and reviews are deleted with them).",
+      "description": "Deletes the demo co-working spaces (their reservations, closures, reviews and waitlist entries are deleted with them).",
       "item": [
         {
           "name": "Delete Co-working Space A",

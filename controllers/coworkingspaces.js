@@ -2,6 +2,7 @@ const CoworkingSpace = require("../models/CoworkingSpace");
 const Reservation = require("../models/Reservation");
 const Closure = require("../models/Closure");
 const Review = require("../models/Review");
+const WaitlistEntry = require("../models/WaitlistEntry");
 const { RATING_FIELDS } = require("../utils/spaceRating");
 const errorMessage = require("../utils/errorMessage");
 
@@ -164,7 +165,8 @@ exports.updateCoworkingSpace = async (req, res, next) => {
   }
 };
 
-//@desc     Delete co-working space (and its reservations, closures and reviews)
+//@desc     Delete co-working space (and its reservations, closures, reviews
+//          and waitlist entries)
 //@route    DELETE /api/v1/coworkingspaces/:id
 //@access   Private (admin)
 exports.deleteCoworkingSpace = async (req, res, next) => {
@@ -181,6 +183,7 @@ exports.deleteCoworkingSpace = async (req, res, next) => {
     await Reservation.deleteMany({ coworkingSpace: req.params.id });
     await Closure.deleteMany({ coworkingSpace: req.params.id });
     await Review.deleteMany({ coworkingSpace: req.params.id });
+    await WaitlistEntry.deleteMany({ coworkingSpace: req.params.id });
     await CoworkingSpace.deleteOne({ _id: req.params.id });
 
     res.status(200).json({ success: true, data: {} });

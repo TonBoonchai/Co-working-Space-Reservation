@@ -13,6 +13,8 @@ participant "<<model>>\n:Closure" as closureModel
 database "<<MongoDB>>\n:reservations" as db
 database "<<MongoDB>>\n:coworkingspaces" as spaceDb
 database "<<MongoDB>>\n:closures" as closureDb
+participant "<<utility>>\n:waitlist" as waitlist
+participant "<<utility>>\n:notifications" as notify
 
 client -> server ++ : req.put('/api/v1/reservations/:id')\nAuthorization: Bearer token\n{startTime?, endTime?, coworkingSpace?}
 server -> router ++ : app.use('/api/v1/reservations', reservations)
@@ -56,7 +58,13 @@ else owner or admin
         model -> db ++ : ReservationSchema
         db --> model -- : updated reservation
         model --> ctrl -- : reservation
+        ctrl -> waitlist ++ : fillFromWaitlist(old coworkingSpace)
+        waitlist --> ctrl -- : given (new reservations\nfrom waitlist entries)
         ctrl --> client : 200 {success:true, data: reservation}
+        ctrl -> notify : notifyWaitlistGiven(given)\n(the response does not wait)
+        opt admin edits the reservation of a different user
+          ctrl -> notify : notifyAdminEdited(owner, before, after)
+        end
       end
     end
   end

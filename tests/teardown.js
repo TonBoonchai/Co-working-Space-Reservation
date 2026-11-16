@@ -10,6 +10,7 @@ const CoworkingSpace = require("../models/CoworkingSpace");
 const Reservation = require("../models/Reservation");
 const Closure = require("../models/Closure");
 const Review = require("../models/Review");
+const WaitlistEntry = require("../models/WaitlistEntry");
 
 // Only accounts on this test domain can be deleted
 const TEST_EMAIL = /@coworking\.test$/;
@@ -38,6 +39,11 @@ exports.removeTestData = async ({ emails = [], spaceIds = [] }) => {
           $or: [{ user: { $in: userIds } }, { coworkingSpace: { $in: ids } }],
         })
       ).deletedCount,
+      waitlistEntries: (
+        await WaitlistEntry.deleteMany({
+          $or: [{ user: { $in: userIds } }, { coworkingSpace: { $in: ids } }],
+        })
+      ).deletedCount,
       spaces: (await CoworkingSpace.deleteMany({ _id: { $in: ids } }))
         .deletedCount,
       users: (await User.deleteMany({ _id: { $in: userIds } })).deletedCount,
@@ -46,7 +52,7 @@ exports.removeTestData = async ({ emails = [], spaceIds = [] }) => {
     console.log(
       `Teardown: removed ${removed.users} users, ${removed.spaces} spaces, ` +
         `${removed.reservations} reservations, ${removed.closures} closures, ` +
-        `${removed.reviews} reviews`,
+        `${removed.reviews} reviews, ${removed.waitlistEntries} waitlist entries`,
     );
     return removed;
   } finally {

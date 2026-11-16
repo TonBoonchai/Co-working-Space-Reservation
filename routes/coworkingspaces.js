@@ -11,6 +11,7 @@ const {
 const reservationRouter = require("./reservations");
 const closureRouter = require("./closures");
 const reviewRouter = require("./reviews");
+const waitlistRouter = require("./waitlist");
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ const { protect, authorize } = require("../middleware/auth");
 router.use("/:coworkingSpaceId/reservations/", reservationRouter);
 router.use("/:coworkingSpaceId/closures/", closureRouter);
 router.use("/:coworkingSpaceId/reviews/", reviewRouter);
+router.use("/:coworkingSpaceId/waitlist/", waitlistRouter);
 
 router
   .route("/")

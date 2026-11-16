@@ -26,12 +26,14 @@ const auth = require("./routes/auth");
 const reservations = require("./routes/reservations");
 const closures = require("./routes/closures");
 const reviews = require("./routes/reviews");
+const waitlist = require("./routes/waitlist");
 
 app.use("/api/v1/coworkingspaces", coworkingspaces);
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/reservations", reservations);
 app.use("/api/v1/closures", closures);
 app.use("/api/v1/reviews", reviews);
+app.use("/api/v1/waitlist", waitlist);
 
 const PORT = process.env.PORT || 5000;
 

@@ -46,7 +46,7 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/coworkingspaces/:id` | Public | One space |
 | POST | `/coworkingspaces` | Admin | Create a space (`name`, `address`, `tel`, `openTime`, `closeTime`, `capacity`) |
 | PUT | `/coworkingspaces/:id` | Admin | Update a space, for example its `capacity` |
-| DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations, its closures and its reviews |
+| DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations, its closures, its reviews and its waitlist entries |
 | POST | `/coworkingspaces/:coworkingSpaceId/reservations` | User/Admin | Create a reservation (`startTime`, `endTime`) |
 | GET | `/coworkingspaces/:coworkingSpaceId/reservations` | Private | Reservations at one space (own only for users) |
 | GET | `/reservations` | Private | Users: own reservations. Admin: all |
@@ -65,6 +65,10 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/reviews` | Public | All reviews, with the reviewer name and the space |
 | GET | `/reviews/:id` | Public | One review |
 | DELETE | `/reviews/:id` | Admin | Delete a review |
+| POST | `/coworkingspaces/:coworkingSpaceId/waitlist` | User/Admin | Join the waitlist of a full space (`startTime`, `endTime`) |
+| GET | `/coworkingspaces/:coworkingSpaceId/waitlist` | Private | Waitlist entries at one space (own only for users) |
+| GET | `/waitlist` | Private | Users: own waitlist entries. Admin: all |
+| DELETE | `/waitlist/:id` | Owner/Admin | Leave the waitlist (delete one entry) |
 
 Example co-working space body:
 
@@ -103,6 +107,9 @@ Example review body:
 - **Closure:** a period when one space is closed, for example for maintenance. The end must be later than the start. A closure must not overlap a reservation at its space (the error gives the number of reservations). A `PUT` cannot move a closure to a different space. Two periods overlap only when one starts before the other ends, so periods that only touch (12:00-12:00) are allowed. The overlap rules apply to admins too. The overlap check and the write run in one MongoDB transaction that locks the space, so two requests at the same time cannot create an overlap.
 - **Force closure:** with `"force": true`, a closure `POST` or `PUT` does not reject the reservations in its period. It deletes them in the same transaction as the closure write. `force` must be `true` or `false`. The response gives the number of deleted reservations in `canceledReservations` (`0` without force).
 - **Cancellation email:** after a force closure, the server sends one email to the owner of each deleted reservation. The email gives the space, the reservation time, the closure time and the reason. The response does not wait for the emails, and an email that fails does not undo the closure.
+- **Admin change email:** when an admin edits or deletes the reservation of a different user, the server sends one email to that user. An edit email gives the space and the time before and after the edit. A delete email gives the space and the time. The response does not wait for the email.
+- **Waitlist:** a user can join the waitlist of a space only when the space is full at some time in the requested period. The period follows the reservation time rules, and it must not overlap a closure. A user at the reservation limit cannot join. One user cannot have two entries at one space that overlap.
+- **Waitlist reservation:** a delete, an edit or a force closure can free a place at a space. In the same transaction, the server checks the future waitlist entries of that space, oldest first. An entry becomes a reservation when the space has a place for its whole period, no closure overlaps it, and its user is under the reservation limit. Other entries stay on the waitlist. The server then sends one email to the user of each new reservation.
 - **Review:** only the owner of a reservation can review it, and only after the reservation ends. A reservation can have one review. The rating is a whole number from 1 to 5, and the comment is required (at most 1000 characters). The space comes from the reservation. Only the admin can delete a review. A review stays when its reservation is deleted. A review shows only the reviewer's name.
 - **Rating of a space:** each space has `averageRating` (rounded to 2 decimals, `null` when there are no reviews) and `reviewCount`. The API calculates them again after each review create or delete, under the same space lock as the closure checks. A client cannot set them in a space `POST` or `PUT`.
 - **Ownership:** a user can only view, edit or delete their own reservations (401 otherwise). An edit can never change who owns a reservation.
@@ -123,7 +130,7 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 73 requests, 133 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 81 requests, 145 assertions, all passing.
 
 The review folders make a reservation that ends a few seconds after it starts, and wait for it to end. A reservation must start and end on the same day, so these folders fail near midnight Bangkok time.
 
@@ -156,6 +163,9 @@ The review folders make a reservation that ends a few seconds after it starts, a
 | 15 | Admin Manage Reviews | `15 Admin Manage Reviews` |
 | 16 | Admin Set Capacity | `16 Admin Set Capacity` |
 | 17 | Admin Force Closure | `17 Admin Force Closure` |
+| 18 | User Join Waitlist | `18 User Join Waitlist` |
+| 19 | Waitlist Gives Reservation | `19 Waitlist Gives Reservation` |
+| 20 | User Leave Waitlist | `20 User Leave Waitlist` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -164,7 +174,7 @@ PlantUML sources are in [`docs/diagrams/`](docs/diagrams/), and rendered PNGs ar
 
 - Use case: [`usecase.png`](docs/diagrams/png/usecase.png)
 - Class diagram (UML Profile for REST): [`class.png`](docs/diagrams/png/class.png)
-- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png), [create review](docs/diagrams/png/10-create-review.png)
+- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png), [create review](docs/diagrams/png/10-create-review.png), [join waitlist](docs/diagrams/png/11-join-waitlist.png)
 
 To re-render, use the PlantUML VS Code extension, or run `java -jar plantuml.jar -tpng docs/diagrams/**/*.puml`.
 

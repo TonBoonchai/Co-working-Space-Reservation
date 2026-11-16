@@ -1,17 +1,21 @@
 const Reservation = require("../models/Reservation");
 const CoworkingSpace = require("../models/CoworkingSpace");
-const Closure = require("../models/Closure");
+const User = require("../models/User");
 const sendError = require("../utils/sendError");
-const { overlapFilter } = require("../utils/overlap");
-const { withSpaceLock } = require("../utils/spaceLock");
+const { withSpaceLock, lockSpace } = require("../utils/spaceLock");
 const { findCapacityConflict } = require("../utils/capacity");
+const { findClosureConflict } = require("../utils/closureConflict");
 const {
-  checkReservationTime,
-  formatBangkok,
-} = require("../utils/reservationTime");
-
-// A general user can hold at most this many reservations (admins are exempt)
-const MAX_RESERVATIONS = 3;
+  MAX_RESERVATIONS,
+  isAtReservationLimit,
+} = require("../utils/reservationLimit");
+const { fillFromWaitlist } = require("../utils/waitlist");
+const {
+  notifyAdminEdited,
+  notifyAdminDeleted,
+  notifyWaitlistGiven,
+} = require("../utils/notifications");
+const { checkReservationTime } = require("../utils/reservationTime");
 
 const populateSpace = {
   path: "coworkingSpace",
@@ -19,26 +23,13 @@ const populateSpace = {
 };
 const populateUser = { path: "user", select: "name email tel" };
 
-// Returns an error message when a closure overlaps the period, or null.
-// Run it only after checkReservationTime, so that the dates are valid.
-// Run it inside withSpaceLock, with the same session as the write.
-const findClosureConflict = async (
-  coworkingSpace,
-  startTime,
-  endTime,
-  session,
-) => {
-  const closure = await Closure.findOne(
-    overlapFilter(coworkingSpace._id, new Date(startTime), new Date(endTime)),
-  )
-    .sort("startTime")
-    .session(session);
+// True when an admin acts on the reservation of a different user
+const isAdminOnOther = (reservation, user) =>
+  user.role === "admin" && reservation.user.toString() !== user.id;
 
-  if (!closure) return null;
-
-  const reason = closure.reason ? ` (${closure.reason})` : "";
-  return `${coworkingSpace.name} is closed from ${formatBangkok(closure.startTime)} to ${formatBangkok(closure.endTime)}${reason}`;
-};
+// The owner of a reservation, for an email. Null when the user was deleted.
+const findOwner = (reservation) =>
+  User.findById(reservation.user).select("name email");
 
 const isOwnerOrAdmin = (reservation, user) =>
   reservation.user.toString() === user.id || user.role === "admin";
@@ -139,17 +130,11 @@ exports.addReservation = async (req, res, next) => {
     }
 
     // If the user is not an admin, they can only create 3 reservations
-    if (req.user.role !== "admin") {
-      const existedReservations = await Reservation.countDocuments({
-        user: req.user.id,
+    if (await isAtReservationLimit(req.user)) {
+      return res.status(400).json({
+        success: false,
+        message: `The user with ID ${req.user.id} has already made ${MAX_RESERVATIONS} reservations`,
       });
-
-      if (existedReservations >= MAX_RESERVATIONS) {
-        return res.status(400).json({
-          success: false,
-          message: `The user with ID ${req.user.id} has already made ${MAX_RESERVATIONS} reservations`,
-        });
-      }
     }
 
     // The space must not be closed or full at any time during the reservation.
@@ -241,39 +226,65 @@ exports.updateReservation = async (req, res, next) => {
       return res.status(400).json({ success: false, message: timeError });
     }
 
+    // Keep the old values for the waitlist and for the email
+    const before = {
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      coworkingSpace: reservation.coworkingSpace,
+    };
+    const movesSpace = !before.coworkingSpace.equals(coworkingSpace._id);
+
     // The new space must not be closed or full at any time during the
     // reservation. This reservation does not count against the capacity.
     // The checks and the save run under one lock on the new space.
-    const conflictError = await withSpaceLock(
-      coworkingSpace._id,
-      async (session) => {
-        const conflict =
-          (await findClosureConflict(
-            coworkingSpace,
-            startTime,
-            endTime,
-            session,
-          )) ??
-          (await findCapacityConflict(
-            coworkingSpace,
-            startTime,
-            endTime,
-            session,
-            reservation._id,
-          ));
+    // The edit can free a place in the old period, so the waitlist of the old
+    // space gets a chance in the same transaction.
+    const result = await withSpaceLock(coworkingSpace._id, async (session) => {
+      if (movesSpace) await lockSpace(before.coworkingSpace, session);
 
-        if (conflict) return conflict;
+      const conflict =
+        (await findClosureConflict(
+          coworkingSpace,
+          startTime,
+          endTime,
+          session,
+        )) ??
+        (await findCapacityConflict(
+          coworkingSpace,
+          startTime,
+          endTime,
+          session,
+          reservation._id,
+        ));
 
-        reservation.startTime = startTime;
-        reservation.endTime = endTime;
-        reservation.coworkingSpace = coworkingSpace._id;
-        await reservation.save({ session });
-        return null;
-      },
-    );
+      if (conflict) return { error: conflict };
 
-    if (conflictError) {
-      return res.status(400).json({ success: false, message: conflictError });
+      reservation.startTime = startTime;
+      reservation.endTime = endTime;
+      reservation.coworkingSpace = coworkingSpace._id;
+      await reservation.save({ session });
+
+      const given = await fillFromWaitlist(before.coworkingSpace, session);
+      return { given };
+    });
+
+    if (result.error) {
+      return res.status(400).json({ success: false, message: result.error });
+    }
+
+    notifyWaitlistGiven(result.given);
+
+    if (isAdminOnOther(reservation, req.user)) {
+      const owner = await findOwner(reservation);
+      const oldSpace = movesSpace
+        ? await CoworkingSpace.findById(before.coworkingSpace)
+        : coworkingSpace;
+
+      notifyAdminEdited(
+        owner,
+        { ...before, spaceName: oldSpace?.name ?? "a deleted space" },
+        { startTime, endTime, spaceName: coworkingSpace.name },
+      );
     }
 
     await reservation.populate(populateSpace);
@@ -309,7 +320,23 @@ exports.deleteReservation = async (req, res, next) => {
       });
     }
 
-    await reservation.deleteOne();
+    // The delete frees a place, so the waitlist of the space gets a chance
+    // in the same transaction.
+    const given = await withSpaceLock(
+      reservation.coworkingSpace,
+      async (session) => {
+        await Reservation.deleteOne({ _id: reservation._id }).session(session);
+        return fillFromWaitlist(reservation.coworkingSpace, session);
+      },
+    );
+
+    notifyWaitlistGiven(given);
+
+    if (isAdminOnOther(reservation, req.user)) {
+      const owner = await findOwner(reservation);
+      const space = await CoworkingSpace.findById(reservation.coworkingSpace);
+      notifyAdminDeleted(owner, reservation, space?.name ?? "a deleted space");
+    }
 
     res.status(200).json({
       success: true,

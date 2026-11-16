@@ -9,6 +9,8 @@ participant "<<middleware>>\n:auth" as auth
 participant "<<controllers>>\n:reservations" as ctrl
 participant "<<model>>\n:Reservation" as model
 database "<<MongoDB>>\n:reservations" as db
+participant "<<utility>>\n:waitlist" as waitlist
+participant "<<utility>>\n:notifications" as notify
 
 client -> server ++ : req.delete('/api/v1/reservations/:id')\nAuthorization: Bearer token
 server -> router ++ : app.use('/api/v1/reservations', reservations)
@@ -24,11 +26,19 @@ alt not found
 else not the owner and not admin
   ctrl --> client : 401 User ... is not authorized\nto delete this reservation
 else owner or admin
-  ctrl -> model ++ : reservation.deleteOne()
-  model -> db ++ : ReservationSchema
-  db --> model -- : deleted
-  model --> ctrl -- : done
+  group one transaction with the space lock
+    ctrl -> model ++ : deleteOne({_id: id})
+    model -> db ++ : ReservationSchema
+    db --> model -- : deleted
+    model --> ctrl -- : done
+    ctrl -> waitlist ++ : fillFromWaitlist(coworkingSpace)
+    waitlist --> ctrl -- : given (new reservations\nfrom waitlist entries)
+  end
   ctrl --> client : 200 {success:true, data:{}}
+  ctrl -> notify : notifyWaitlistGiven(given)\n(the response does not wait)
+  opt admin deletes the reservation of a different user
+    ctrl -> notify : notifyAdminDeleted(owner, reservation, spaceName)
+  end
 end
 deactivate ctrl
 deactivate router
