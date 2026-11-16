@@ -94,7 +94,9 @@ npm run test:race           # concurrent reservation + closure requests (about 1
 
 The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 61 requests, 114 assertions, all passing.
 
-`npm run test:race` sends 20 pairs of requests at the same time. Each pair is one reservation and one closure for the same space and time. Exactly one request of each pair must succeed. The script makes its own admin and space, and deletes the space at the end.
+`npm run test:api` also deletes the admin, the user and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and user stay in the database.
+
+`npm run test:race` sends 20 pairs of requests at the same time. Each pair is one reservation and one closure for the same space and time. Exactly one request of each pair must succeed. The script makes its own admin and space, and deletes both at the end, also when the test fails.
 
 ### Presentation steps → Postman folders
 
