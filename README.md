@@ -113,7 +113,7 @@ npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 85 requests, 152 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 77 requests, 139 assertions, all passing.
 
 The review folders make a reservation that ends a few seconds after it starts, and wait for it to end. A reservation must start and end on the same day, so these folders fail near midnight Bangkok time.
 
