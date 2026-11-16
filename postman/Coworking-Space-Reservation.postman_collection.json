@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Co-working Space Reservation",
-    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-12).",
+    "description": "SW Dev Practice term project #6. Run the whole collection with the Collection Runner or Newman, using the \"Co-working Space Reservation - Local\" environment. Folders follow the presentation order (steps 1-13).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -33,6 +33,8 @@
                   "pm.environment.set(\"runId\", runId);",
                   "pm.environment.set(\"day1\", bkkDay(1));",
                   "pm.environment.set(\"day2\", bkkDay(2));",
+                  "pm.environment.set(\"day3\", bkkDay(3));",
+                  "pm.environment.set(\"day4\", bkkDay(4));",
                   "pm.environment.set(\"adminEmail\", \"admin\" + runId + \"@coworking.test\");",
                   "pm.environment.set(\"userEmail\", \"user\" + runId + \"@coworking.test\");"
                 ]
@@ -910,6 +912,44 @@
       "name": "04+ Check Create Condition",
       "description": "Reservations that break the rules are rejected with a reason.",
       "item": [
+        {
+          "name": "Create - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'Please add a start time and an end time'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"Please add a start time and an end time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "The request has no body. Expect a 400 that names the missing fields."
+          }
+        },
         {
           "name": "Create - Outside Opening Hours",
           "event": [
@@ -1850,8 +1890,920 @@
       ]
     },
     {
+      "name": "13 Admin Manage Closure Periods",
+      "description": "The admin (still logged in from step 9) creates, views, updates and deletes closure periods. Viewing closures is public. Only the admin can change them.",
+      "item": [
+        {
+          "name": "Create Closure on Space B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"closureId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "closures"
+              ]
+            },
+            "description": "Admin only. Space B is closed from day 3 12:00 to day 4 12:00.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T12:00:00+07:00\",\n  \"endTime\": \"{{day4}}T12:00:00+07:00\",\n  \"reason\": \"Air conditioner maintenance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Closures of Space B (Public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Space B has 1 closure\", function () {",
+                  "  pm.expect(pm.response.json().count).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "closures"
+              ]
+            },
+            "description": "No token is needed. Users can see when a space is closed.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Get Single Closure (Public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"It is the closure that was created\", function () {",
+                  "  pm.expect(pm.response.json().data._id).to.eql(pm.environment.get(\"closureId\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Update Closure Reason",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Reason was updated\", function () {",
+                  "  pm.expect(pm.response.json().data.reason).to.eql(\"Air conditioner and network maintenance\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Air conditioner and network maintenance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Closure - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Nothing changed\", function () {",
+                  "  pm.expect(pm.response.json().data.reason).to.eql(\"Air conditioner and network maintenance\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "The request has no body, so the closure keeps its values."
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.environment.set(\"userToken\", pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/auth/login",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Gets a user token for the next request. The admin stays logged in.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Closure as User (Denied)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "closures"
+              ]
+            },
+            "description": "Sent with the user token. Only the admin can manage closures.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{userToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T00:00:00+07:00\",\n  \"endTime\": \"{{day4}}T00:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Closure - End Before Start",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'End time must be later than start time'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"End time must be later than start time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "closures"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T00:00:00+07:00\",\n  \"endTime\": \"{{day3}}T00:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Closure - No Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'Please add a start time and an end time'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"Please add a start time and an end time\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "closures"
+              ]
+            },
+            "description": "The request has no body. Expect a 400 that names the missing fields."
+          }
+        },
+        {
+          "name": "Create Closure to Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"tmpClosureId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "closures"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day4}}T00:00:00+07:00\",\n  \"endTime\": \"{{day4}}T06:00:00+07:00\",\n  \"reason\": \"Cleaning\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{tmpClosureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{tmpClosureId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get Deleted Closure (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{tmpClosureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{tmpClosureId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13+ Check Closure Conditions",
+      "description": "A reservation and a closure at the same space can never overlap, in either order of creation. Periods that only touch do not overlap. The rules apply to the admin too.",
+      "item": [
+        {
+          "name": "Create Reservation - Inside Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message names the closure times\", function () {",
+                  "  const msg = pm.response.json().message;",
+                  "  pm.expect(msg).to.include(\"is closed from \" + pm.environment.get(\"day3\") + \" 12:00\");",
+                  "  pm.expect(msg).to.include(\"to \" + pm.environment.get(\"day4\") + \" 12:00\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "reservations"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T13:00:00+07:00\",\n  \"endTime\": \"{{day3}}T15:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation - Ends When Closure Starts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"touchResvId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "reservations"
+              ]
+            },
+            "description": "Ends at 12:00, when the closure starts. Touching periods do not overlap.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T10:00:00+07:00\",\n  \"endTime\": \"{{day3}}T12:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Reservation - Into Closure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'is closed from'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"is closed from\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{touchResvId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{touchResvId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T11:00:00+07:00\",\n  \"endTime\": \"{{day3}}T13:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Reservation on Space A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"moveResvId\", pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/reservations",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "reservations"
+              ]
+            },
+            "description": "Space A has no closure at this time.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T13:00:00+07:00\",\n  \"endTime\": \"{{day3}}T15:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Reservation - Move to Closed Space",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions 'is closed from'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"is closed from\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/reservations/{{moveResvId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reservations",
+                "{{moveResvId}}"
+              ]
+            },
+            "description": "Same time, but Space B is closed then.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coworkingSpace\": \"{{spaceBId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create Closure - Over Existing Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions '2 reservations overlap this closure period'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"2 reservations overlap this closure period\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/closures",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceBId}}",
+                "closures"
+              ]
+            },
+            "description": "Day 2 at Space B has the admin's reservation from 00 Setup and the user's Reservation #3.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day2}}T00:00:00+07:00\",\n  \"endTime\": \"{{day3}}T00:00:00+07:00\",\n  \"reason\": \"Painting\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Closure - Grow Over Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"message mentions '1 reservation overlaps this closure period'\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message || body.msg).to.include(\"1 reservation overlaps this closure period\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "An earlier start would cover the day 3 10:00-12:00 reservation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{day3}}T09:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "99 Cleanup",
-      "description": "Deletes the demo co-working spaces (their reservations are deleted with them).",
+      "description": "Deletes the demo co-working spaces (their reservations and closures are deleted with them).",
       "item": [
         {
           "name": "Delete Co-working Space A",
@@ -1917,6 +2869,42 @@
               ]
             },
             "description": ""
+          }
+        },
+        {
+          "name": "Get Closure After Space Delete (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/closures/{{closureId}}",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "closures",
+                "{{closureId}}"
+              ]
+            },
+            "description": "Deleting Space B also deleted its closure.",
+            "auth": {
+              "type": "noauth"
+            }
           }
         },
         {

@@ -10,8 +10,10 @@ participant "<<middleware>>\n:auth" as auth
 participant "<<controllers>>\n:reservations" as ctrl
 participant "<<model>>\n:CoworkingSpace" as spaceModel
 participant "<<model>>\n:Reservation" as model
+participant "<<model>>\n:Closure" as closureModel
 database "<<MongoDB>>\n:coworkingspaces" as spaceDb
 database "<<MongoDB>>\n:reservations" as db
+database "<<MongoDB>>\n:closures" as closureDb
 
 client -> server ++ : req.post('/api/v1/coworkingspaces/:coworkingSpaceId/reservations')\nAuthorization: Bearer token\n{startTime, endTime}
 server -> spaceRouter ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
@@ -34,20 +36,28 @@ else token OK
     alt start in the past / end not after start /\nnot the same day / outside open-close time
       ctrl --> client : 400 {success:false, message: reason}
     else time OK
-      opt user is not admin
-        ctrl -> model ++ : countDocuments({user: req.user.id})
-        model -> db ++ : ReservationSchema
-        db --> model -- : count
-        model --> ctrl -- : count
-      end
-      alt not admin and count >= 3
-        ctrl --> client : 400 "The user with ID ... has\nalready made 3 reservations"
-      else allowed
-        ctrl -> model ++ : create({startTime, endTime,\nuser: req.user.id, coworkingSpace})
-        model -> db ++ : ReservationSchema
-        db --> model -- : reservation
-        model --> ctrl -- : reservation
-        ctrl --> client : 201 {success:true, data: reservation}
+      ctrl -> closureModel ++ : findOne(overlapFilter(coworkingSpace,\nstartTime, endTime))
+      closureModel -> closureDb ++ : ClosureSchema
+      closureDb --> closureModel -- : closure / null
+      closureModel --> ctrl -- : closure / null
+      alt closure overlaps the reservation
+        ctrl --> client : 400 "<space> is closed from\n<start> to <end> (<reason>)"
+      else space open
+        opt user is not admin
+          ctrl -> model ++ : countDocuments({user: req.user.id})
+          model -> db ++ : ReservationSchema
+          db --> model -- : count
+          model --> ctrl -- : count
+        end
+        alt not admin and count >= 3
+          ctrl --> client : 400 "The user with ID ... has\nalready made 3 reservations"
+        else allowed
+          ctrl -> model ++ : create({startTime, endTime,\nuser: req.user.id, coworkingSpace})
+          model -> db ++ : ReservationSchema
+          db --> model -- : reservation
+          model --> ctrl -- : reservation
+          ctrl --> client : 201 {success:true, data: reservation}
+        end
       end
     end
   end

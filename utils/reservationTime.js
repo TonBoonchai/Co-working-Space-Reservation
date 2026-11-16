@@ -7,6 +7,14 @@ const toBangkok = (date) => {
   return { day: iso.slice(0, 10), time: iso.slice(11, 16) };
 };
 
+// "YYYY-MM-DD HH:mm" in Bangkok time, for messages
+const formatBangkok = (date) => {
+  const { day, time } = toBangkok(new Date(date));
+  return `${day} ${time}`;
+};
+
+exports.formatBangkok = formatBangkok;
+
 // Check a reservation's time against the rules.
 // Returns an error message, or null when the time is allowed.
 exports.checkReservationTime = (startTime, endTime, coworkingSpace) => {

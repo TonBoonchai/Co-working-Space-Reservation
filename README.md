@@ -44,13 +44,19 @@ Base URL: `http://localhost:5050/api/v1`. Private routes need `Authorization: Be
 | GET | `/coworkingspaces/:id` | Public | One space |
 | POST | `/coworkingspaces` | Admin | Create a space |
 | PUT | `/coworkingspaces/:id` | Admin | Update a space |
-| DELETE | `/coworkingspaces/:id` | Admin | Delete a space and its reservations |
+| DELETE | `/coworkingspaces/:id` | Admin | Delete a space, its reservations and its closures |
 | POST | `/coworkingspaces/:coworkingSpaceId/reservations` | User/Admin | Create a reservation (`startTime`, `endTime`) |
 | GET | `/coworkingspaces/:coworkingSpaceId/reservations` | Private | Reservations at one space (own only for users) |
 | GET | `/reservations` | Private | Users: own reservations. Admin: all |
 | GET | `/reservations/:id` | Owner/Admin | One reservation |
 | PUT | `/reservations/:id` | Owner/Admin | Change `startTime`, `endTime` or `coworkingSpace` |
 | DELETE | `/reservations/:id` | Owner/Admin | Delete a reservation |
+| GET | `/coworkingspaces/:coworkingSpaceId/closures` | Public | Closures of one space, sorted by `startTime` |
+| POST | `/coworkingspaces/:coworkingSpaceId/closures` | Admin | Create a closure (`startTime`, `endTime`, optional `reason`) |
+| GET | `/closures` | Public | All closures, with the space name and address |
+| GET | `/closures/:id` | Public | One closure |
+| PUT | `/closures/:id` | Admin | Change `startTime`, `endTime` or `reason` |
+| DELETE | `/closures/:id` | Admin | Delete a closure |
 
 Example reservation body (times are Bangkok time):
 
@@ -58,9 +64,16 @@ Example reservation body (times are Bangkok time):
 { "startTime": "2026-12-01T09:00:00+07:00", "endTime": "2026-12-01T12:00:00+07:00" }
 ```
 
+Example closure body (a closure can span many days):
+
+```json
+{ "startTime": "2026-12-05T00:00:00+07:00", "endTime": "2026-12-07T00:00:00+07:00", "reason": "Air conditioner maintenance" }
+```
+
 ### Rules and validation
 
-- **Reservation:** must start in the future, end after it starts, start and end on the same day, and fit inside the space's `openTime`-`closeTime`. A general user can hold at most 3 reservations; admins have no limit.
+- **Reservation:** must start in the future, end after it starts, start and end on the same day, and fit inside the space's `openTime`-`closeTime`. It must not overlap a closure of its space. A general user can hold at most 3 reservations; admins have no limit.
+- **Closure:** a period when one space is closed, for example for maintenance. The end must be later than the start. A closure must not overlap a reservation at its space (the error gives the number of reservations). A `PUT` cannot move a closure to a different space. Two periods overlap only when one starts before the other ends, so periods that only touch (12:00-12:00) are allowed. The overlap rules apply to admins too. The overlap check and the write run in one MongoDB transaction that locks the space, so two requests at the same time cannot create an overlap.
 - **Ownership:** a user can only view, edit or delete their own reservations (401 otherwise). An edit can never change who owns a reservation.
 - **Thai telephone numbers** (users and spaces, dashes optional):
   - mobile `081-234-5678` / `0812345678`
@@ -76,9 +89,14 @@ Import both files from [`postman/`](postman/) into Postman, select the **Co-work
 npm install -g newman newman-reporter-htmlextra
 npm run test:api            # CLI output
 npm run test:api:report     # also writes newman/report.html
+npm run test:race           # concurrent reservation + closure requests (about 15 s)
 ```
 
-The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 40 requests, 81 assertions, all passing.
+The collection creates its own admin, user and spaces with unique names for each run, and deletes the spaces at the end, so it can be run repeatedly. Current result: 61 requests, 114 assertions, all passing.
+
+`npm run test:api` also deletes the admin, the user and any spaces left by the run, also when the run fails. It connects to MongoDB directly ([`tests/teardown.js`](tests/teardown.js)), because the API has no route that deletes a user. It deletes only `@coworking.test` accounts. A run in the Postman app does not do this, so its admin and user stay in the database.
+
+`npm run test:race` sends 20 pairs of requests at the same time. Each pair is one reservation and one closure for the same space and time. Exactly one request of each pair must succeed. The script makes its own admin and space, and deletes both at the end, also when the test fails.
 
 ### Presentation steps → Postman folders
 
@@ -98,6 +116,8 @@ The collection creates its own admin, user and spaces with unique names for each
 | 10 | Admin View Any Booking | `10 Admin View Any Reservation` |
 | 11 | Admin Edit Any Booking | `11 Admin Edit Any Reservation` |
 | 12 | Admin Delete Any Booking | `12 Admin Delete Any Reservation` |
+| 13 | Admin Manage Closure Periods | `13 Admin Manage Closure Periods` |
+| 13+ | Check Closure Conditions | `13+ Check Closure Conditions` |
 | – | Remove demo spaces | `99 Cleanup` |
 
 ## Diagrams
@@ -106,7 +126,7 @@ PlantUML sources are in [`docs/diagrams/`](docs/diagrams/), and rendered PNGs ar
 
 - Use case: [`usecase.png`](docs/diagrams/png/usecase.png)
 - Class diagram (UML Profile for REST): [`class.png`](docs/diagrams/png/class.png)
-- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png)
+- Sequence diagrams: [register](docs/diagrams/png/01-register.png), [login](docs/diagrams/png/02-login.png), [view spaces](docs/diagrams/png/03-view-coworking-spaces.png), [create reservation](docs/diagrams/png/04-create-reservation.png), [view reservations](docs/diagrams/png/05-view-reservations.png), [edit reservation](docs/diagrams/png/06-update-reservation.png), [delete reservation](docs/diagrams/png/07-delete-reservation.png), [logout](docs/diagrams/png/08-logout.png), [create closure](docs/diagrams/png/09-create-closure.png)
 
 To re-render, use the PlantUML VS Code extension, or run `java -jar plantuml.jar -tpng docs/diagrams/**/*.puml`.
 
