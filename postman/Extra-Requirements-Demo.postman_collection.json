@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Extra Requirements Demo",
-    "description": "A short, linear walk through the extra requirements, for a demo video. Send the requests from top to bottom, or run the collection with the Collection Runner. Use the \"Co-working Space Reservation - Local\" environment for {{URL}}.\n\nEach request name starts with the actor: [Admin], [Alice], [Bob] or [Public]. The collection keeps one token for each actor, so you never log in or log out between requests.\n\nTo show the emails in a real inbox, set the collection variable \"inbox\" (for example you@gmail.com) before you run \"0. Setup\". Each user then gets a plus address, such as you+alice123456@gmail.com. The server must have SMTP_HOST set to send the emails. Without it, the server console shows each email.\n\n\"1.1\" makes a reservation that ends a few seconds from now. A reservation must start and end on the same day, so do not record within a few seconds of midnight Bangkok time.",
+    "description": "A short, linear walk through the extra requirements, for a demo video. Send the requests from top to bottom, or run the collection with the Collection Runner. Use the \"Co-working Space Reservation - Local\" environment for {{URL}}.\n\nEach request name starts with the actor: [Admin], [Alice], [Bob] or [Public]. The collection keeps one token for each actor, so you never log in or log out between requests.\n\nTo show the emails in real inboxes, set the collection variables adminEmail, aliceEmail and bobEmail before you run \"0. Setup\". An empty variable gets a unique @coworking.test address, where real email cannot arrive. If an address is already registered from an earlier run, \"0. Setup\" logs in with it instead. The password must then be admin1234 for the admin and user1234 for Alice and Bob, and adminEmail must belong to an admin. The server must have SMTP_HOST set to send the emails. Without it, the server console shows each email.\n\n\"1.1\" makes a reservation that ends a few seconds from now. A reservation must start and end on the same day, so do not record within a few seconds of midnight Bangkok time.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -9,7 +9,17 @@
   },
   "variable": [
     {
-      "key": "inbox",
+      "key": "adminEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aliceEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bobEmail",
       "value": "",
       "type": "string"
     }
@@ -32,15 +42,13 @@
                   "pm.collectionVariables.set(\"runId\", runId);",
                   "[1, 2, 3, 4, 5].forEach((n) => pm.collectionVariables.set(\"day\" + n, bkkDay(n)));",
                   "",
-                  "// Set the collection variable \"inbox\" (for example you@gmail.com) to get the",
-                  "// emails in a real inbox. Each user then gets a plus address of it.",
-                  "const inbox = (pm.collectionVariables.get(\"inbox\") || \"\").trim();",
-                  "const email = (who) => {",
-                  "  if (!inbox) return who + runId + \"@coworking.test\";",
-                  "  const [local, domain] = inbox.split(\"@\");",
-                  "  return local + \"+\" + who + runId + \"@\" + domain;",
-                  "};",
-                  "[\"admin\", \"alice\", \"bob\"].forEach((who) => pm.collectionVariables.set(who + \"Email\", email(who)));"
+                  "// Set the collection variables adminEmail, aliceEmail and bobEmail to real",
+                  "// addresses to get the emails in real inboxes. An empty variable gets a",
+                  "// unique @coworking.test address, where real email cannot arrive.",
+                  "[\"admin\", \"alice\", \"bob\"].forEach((who) => {",
+                  "  const key = who + \"Email\";",
+                  "  if (!(pm.collectionVariables.get(key) || \"\").trim()) pm.collectionVariables.set(key, who + runId + \"@coworking.test\");",
+                  "});"
                 ]
               }
             },
@@ -49,8 +57,25 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().token);"
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 400 && /already registered/.test(body.message)) {",
+                  "  // The email is from an earlier run, so log in instead",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"URL\") + \"/api/v1/auth/login\",",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/json\" },",
+                  "    body: { mode: \"raw\", raw: JSON.stringify({ email: pm.variables.get(\"adminEmail\"), password: \"admin1234\" }) },",
+                  "  }, (err, res) => {",
+                  "    pm.test(\"Logged in with the existing account\", () => {",
+                  "      pm.expect(err).to.eql(null);",
+                  "      pm.expect(res.code).to.eql(200);",
+                  "    });",
+                  "    pm.collectionVariables.set(\"adminToken\", res.json().token);",
+                  "  });",
+                  "} else {",
+                  "  pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "  pm.collectionVariables.set(\"adminToken\", body.token);",
+                  "}"
                 ]
               }
             }
@@ -91,6 +116,58 @@
           "response": []
         },
         {
+          "name": "[Admin] Delete Spaces Left by Earlier Demo Runs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "// Delete each space from an earlier demo run. This also deletes its",
+                  "// reservations, closures, reviews and waitlist entries.",
+                  "const left = pm.response.json().data.filter((s) => s.name.startsWith(\"Demo Co-Work Hub #\"));",
+                  "console.log(\"Spaces left by earlier demo runs: \" + left.length);",
+                  "left.forEach((space) =>",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"URL\") + \"/api/v1/coworkingspaces/\" + space._id,",
+                  "    method: \"DELETE\",",
+                  "    header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"adminToken\") },",
+                  "  }, (err, res) => pm.test(\"Deleted \" + space.name, () => pm.expect(res.code).to.eql(200)))",
+                  ");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces?select=name&limit=1000",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces?select=name&limit=1000"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "[Public] Register Alice",
           "event": [
             {
@@ -98,8 +175,25 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"aliceToken\", pm.response.json().token);"
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 400 && /already registered/.test(body.message)) {",
+                  "  // The email is from an earlier run, so log in instead",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"URL\") + \"/api/v1/auth/login\",",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/json\" },",
+                  "    body: { mode: \"raw\", raw: JSON.stringify({ email: pm.variables.get(\"aliceEmail\"), password: \"user1234\" }) },",
+                  "  }, (err, res) => {",
+                  "    pm.test(\"Logged in with the existing account\", () => {",
+                  "      pm.expect(err).to.eql(null);",
+                  "      pm.expect(res.code).to.eql(200);",
+                  "    });",
+                  "    pm.collectionVariables.set(\"aliceToken\", res.json().token);",
+                  "  });",
+                  "} else {",
+                  "  pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "  pm.collectionVariables.set(\"aliceToken\", body.token);",
+                  "}"
                 ]
               }
             }
@@ -147,8 +241,25 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"bobToken\", pm.response.json().token);"
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 400 && /already registered/.test(body.message)) {",
+                  "  // The email is from an earlier run, so log in instead",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"URL\") + \"/api/v1/auth/login\",",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/json\" },",
+                  "    body: { mode: \"raw\", raw: JSON.stringify({ email: pm.variables.get(\"bobEmail\"), password: \"user1234\" }) },",
+                  "  }, (err, res) => {",
+                  "    pm.test(\"Logged in with the existing account\", () => {",
+                  "      pm.expect(err).to.eql(null);",
+                  "      pm.expect(res.code).to.eql(200);",
+                  "    });",
+                  "    pm.collectionVariables.set(\"bobToken\", res.json().token);",
+                  "  });",
+                  "} else {",
+                  "  pm.test(\"Status code is 201\", () => pm.response.to.have.status(201));",
+                  "  pm.collectionVariables.set(\"bobToken\", body.token);",
+                  "}"
                 ]
               }
             }
@@ -233,7 +344,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Siam Co-Work Hub #{{runId}}\",\n  \"address\": \"254 Phayathai Rd, Pathum Wan, Bangkok 10330\",\n  \"tel\": \"02-123-4567\",\n  \"openTime\": \"00:00\",\n  \"closeTime\": \"23:59\",\n  \"capacity\": 2\n}",
+              "raw": "{\n  \"name\": \"Demo Co-Work Hub #{{runId}}\",\n  \"address\": \"254 Phayathai Rd, Pathum Wan, Bangkok 10330\",\n  \"tel\": \"02-123-4567\",\n  \"openTime\": \"00:00\",\n  \"closeTime\": \"23:59\",\n  \"capacity\": 2\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -244,7 +355,7 @@
           "response": []
         }
       ],
-      "description": "Admin, Alice (user), Bob (user) and one space with capacity 2. The space opens 00:00-23:59, so the review demo can use a reservation that ends a few seconds from now."
+      "description": "Admin, Alice (user), Bob (user) and one space with capacity 2. The second request deletes the spaces that earlier demo runs left, so each run starts from a clean slate. The space opens 00:00-23:59, so the review demo can use a reservation that ends a few seconds from now."
     },
     {
       "name": "1. Review Management",

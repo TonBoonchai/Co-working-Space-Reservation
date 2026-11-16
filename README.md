@@ -140,7 +140,7 @@ The review folders make a reservation that ends a few seconds after it starts, a
 
 ### Extra requirements demo
 
-[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video. It has one folder for each extra requirement, in the order of [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md). Send its requests from top to bottom with the same environment. Each request name starts with its actor (`[Admin]`, `[Alice]`, `[Bob]` or `[Public]`), and the collection keeps one token for each actor. To get the emails in a real inbox, set the collection variable `inbox` (for example `you@gmail.com`) before `0. Setup`. Each user then gets a plus address of that inbox.
+[`postman/Extra-Requirements-Demo.postman_collection.json`](postman/Extra-Requirements-Demo.postman_collection.json) is a short collection for a demo video. It has one folder for each extra requirement, in the order of [`EXTRA-REQUIREMENTS.md`](EXTRA-REQUIREMENTS.md). Send its requests from top to bottom with the same environment. Each request name starts with its actor (`[Admin]`, `[Alice]`, `[Bob]` or `[Public]`), and the collection keeps one token for each actor. To get the emails in real inboxes, set the collection variables `adminEmail`, `aliceEmail` and `bobEmail` before `0. Setup`. An empty variable gets a unique `@coworking.test` address. When an address is already registered, `0. Setup` logs in with it (password `admin1234` for the admin, `user1234` for Alice and Bob). `0. Setup` also deletes the spaces that earlier demo runs left (names that start with `Demo Co-Work Hub #`), so each run starts from a clean slate.
 
 ### Presentation steps → Postman folders
 
