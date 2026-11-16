@@ -49,7 +49,7 @@ package "Co-working Space Reservation" <<Frame>> {
     <<POST>> +addReservation(): Reservation
   }
   class "SpacePrice" as SpacePrice <<Resource>> {
-    <<POST>> +calculateReservationPrice(): Price
+    <<GET>> +calculateReservationPrice(): Price
   }
   class "SpaceClosures" as SpaceClosures <<Resource>> {
     <<GET>> +getClosures(): Closure

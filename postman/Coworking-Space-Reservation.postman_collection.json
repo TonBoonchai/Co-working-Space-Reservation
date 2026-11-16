@@ -3561,6 +3561,17 @@
           "name": "Calculate Price - 3 Hours",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unix timestamps in milliseconds",
+                  "pm.variables.set(\"startTs\", Date.parse(pm.environment.get(\"day1\") + \"T09:00:00+07:00\"));",
+                  "pm.variables.set(\"endTs\", Date.parse(pm.environment.get(\"day1\") + \"T12:00:00+07:00\"));"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -3589,16 +3600,10 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price?startTime={{startTs}}&endTime={{endTs}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3608,23 +3613,35 @@
                 "coworkingspaces",
                 "{{spaceAId}}",
                 "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{endTs}}"
+                }
               ]
             },
-            "description": "Space A costs 180 THB per hour (see folder 14). 3 hours cost 540 THB. The endpoint is public.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T12:00:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Space A costs 180 THB per hour (see folder 14). 3 hours cost 540 THB. The endpoint is public."
           }
         },
         {
           "name": "Calculate Price - Part of an Hour",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unix timestamps in milliseconds",
+                  "pm.variables.set(\"startTs\", Date.parse(pm.environment.get(\"day1\") + \"T09:00:00+07:00\"));",
+                  "pm.variables.set(\"endTs\", Date.parse(pm.environment.get(\"day1\") + \"T10:30:00+07:00\"));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -3648,16 +3665,10 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price?startTime={{startTs}}&endTime={{endTs}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3667,23 +3678,35 @@
                 "coworkingspaces",
                 "{{spaceAId}}",
                 "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{endTs}}"
+                }
               ]
             },
-            "description": "The price is in proportion to the duration. 90 minutes at 180 THB per hour cost 270 THB.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T10:30:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "The price is in proportion to the duration. 90 minutes at 180 THB per hour cost 270 THB."
           }
         },
         {
           "name": "Calculate Price - Free Space",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unix timestamps in milliseconds",
+                  "pm.variables.set(\"startTs\", Date.parse(pm.environment.get(\"day1\") + \"T09:00:00+07:00\"));",
+                  "pm.variables.set(\"endTs\", Date.parse(pm.environment.get(\"day1\") + \"T17:00:00+07:00\"));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -3707,16 +3730,10 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/price",
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/price?startTime={{startTs}}&endTime={{endTs}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3726,22 +3743,23 @@
                 "coworkingspaces",
                 "{{spaceBId}}",
                 "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{endTs}}"
+                }
               ]
             },
-            "description": "Space B is free (see folder 14). The price is 0 THB.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T17:00:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Space B is free (see folder 14). The price is 0 THB."
           }
         },
         {
-          "name": "Calculate Price - No Body",
+          "name": "Calculate Price - No Times",
           "event": [
             {
               "listen": "test",
@@ -3762,14 +3780,8 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
               "host": [
@@ -3787,8 +3799,69 @@
           }
         },
         {
+          "name": "Calculate Price - Not a Timestamp",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Message tells what is wrong\", function () {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Start time and end time must be Unix timestamps in milliseconds (e.g. 1796090400000)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price?startTime={{day1}}T09:00:00Z&endTime={{day1}}T12:00:00Z",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coworkingspaces",
+                "{{spaceAId}}",
+                "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{day1}}T09:00:00Z"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{day1}}T12:00:00Z"
+                }
+              ]
+            },
+            "description": "The times must be Unix timestamps in milliseconds. A date string is not accepted."
+          }
+        },
+        {
           "name": "Calculate Price - End Before Start",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unix timestamps in milliseconds",
+                  "pm.variables.set(\"startTs\", Date.parse(pm.environment.get(\"day1\") + \"T15:00:00+07:00\"));",
+                  "pm.variables.set(\"endTs\", Date.parse(pm.environment.get(\"day1\") + \"T14:00:00+07:00\"));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -3808,16 +3881,10 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price",
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceAId}}/price?startTime={{startTs}}&endTime={{endTs}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3827,23 +3894,35 @@
                 "coworkingspaces",
                 "{{spaceAId}}",
                 "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{endTs}}"
+                }
               ]
             },
-            "description": "The time rules of a new reservation apply.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day1}}T15:00:00+07:00\",\n  \"endTime\": \"{{day1}}T14:00:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "The time rules of a new reservation apply."
           }
         },
         {
           "name": "Calculate Price - Outside Opening Hours",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unix timestamps in milliseconds",
+                  "pm.variables.set(\"startTs\", Date.parse(pm.environment.get(\"day1\") + \"T07:00:00+07:00\"));",
+                  "pm.variables.set(\"endTs\", Date.parse(pm.environment.get(\"day1\") + \"T10:00:00+07:00\"));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -3863,16 +3942,10 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/price",
+              "raw": "{{URL}}/api/v1/coworkingspaces/{{spaceBId}}/price?startTime={{startTs}}&endTime={{endTs}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3882,23 +3955,35 @@
                 "coworkingspaces",
                 "{{spaceBId}}",
                 "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{endTs}}"
+                }
               ]
             },
-            "description": "Space B opens at 09:00. The price of a period that the space cannot accept is not calculated.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day1}}T07:00:00+07:00\",\n  \"endTime\": \"{{day1}}T10:00:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Space B opens at 09:00. The price of a period that the space cannot accept is not calculated."
           }
         },
         {
           "name": "Calculate Price - Unknown Space",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unix timestamps in milliseconds",
+                  "pm.variables.set(\"startTs\", Date.parse(pm.environment.get(\"day1\") + \"T09:00:00+07:00\"));",
+                  "pm.variables.set(\"endTs\", Date.parse(pm.environment.get(\"day1\") + \"T12:00:00+07:00\"));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -3918,16 +4003,10 @@
             "auth": {
               "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{URL}}/api/v1/coworkingspaces/000000000000000000000000/price",
+              "raw": "{{URL}}/api/v1/coworkingspaces/000000000000000000000000/price?startTime={{startTs}}&endTime={{endTs}}",
               "host": [
                 "{{URL}}"
               ],
@@ -3937,18 +4016,19 @@
                 "coworkingspaces",
                 "000000000000000000000000",
                 "price"
+              ],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{endTs}}"
+                }
               ]
             },
-            "description": "The space must exist.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"startTime\": \"{{day1}}T09:00:00+07:00\",\n  \"endTime\": \"{{day1}}T12:00:00+07:00\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "The space must exist."
           }
         }
       ]

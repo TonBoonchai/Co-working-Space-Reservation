@@ -5,6 +5,9 @@ const errorMessage = require("../utils/errorMessage");
 const { checkReservationTime } = require("../utils/reservationTime");
 const { calculatePrice } = require("../utils/price");
 
+// Unix timestamp in milliseconds, e.g. 1796090400000
+const TIMESTAMP_REGEX = /^\d+$/;
+
 //@desc     Get all co-working spaces
 //@route    GET /api/v1/coworkingspaces
 //@access   Public
@@ -183,7 +186,8 @@ exports.deleteCoworkingSpace = async (req, res, next) => {
 };
 
 //@desc     Calculate the total price of a reservation from its duration
-//@route    POST /api/v1/coworkingspaces/:id/price
+//@route    GET /api/v1/coworkingspaces/:id/price?startTime=&endTime=
+//          (Unix timestamps in milliseconds)
 //@access   Public
 exports.calculateReservationPrice = async (req, res, next) => {
   try {
@@ -204,9 +208,26 @@ exports.calculateReservationPrice = async (req, res, next) => {
       });
     }
 
-    // The same time rules as a new reservation.
-    // (A request with no body has req.body undefined in Express 5)
-    const { startTime, endTime } = req.body ?? {};
+    const { startTime: startQuery, endTime: endQuery } = req.query;
+
+    if (!startQuery || !endQuery) {
+      return res.status(400).json({
+        success: false,
+        message: "Please add a start time and an end time",
+      });
+    }
+
+    if (!TIMESTAMP_REGEX.test(startQuery) || !TIMESTAMP_REGEX.test(endQuery)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Start time and end time must be Unix timestamps in milliseconds (e.g. 1796090400000)",
+      });
+    }
+
+    // The same time rules as a new reservation
+    const startTime = new Date(Number(startQuery));
+    const endTime = new Date(Number(endQuery));
     const timeError = checkReservationTime(startTime, endTime, coworkingSpace);
 
     if (timeError) {
@@ -223,8 +244,8 @@ exports.calculateReservationPrice = async (req, res, next) => {
       success: true,
       data: {
         coworkingSpace: coworkingSpace._id,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime,
+        endTime,
         durationMinutes,
         hourlyRate: coworkingSpace.hourlyRate,
         totalPrice,

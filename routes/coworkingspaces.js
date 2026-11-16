@@ -29,6 +29,6 @@ router
   .get(getCoworkingSpace)
   .put(protect, authorize("admin"), updateCoworkingSpace)
   .delete(protect, authorize("admin"), deleteCoworkingSpace);
-router.route("/:id/price").post(calculateReservationPrice);
+router.route("/:id/price").get(calculateReservationPrice);
 
 module.exports = router;

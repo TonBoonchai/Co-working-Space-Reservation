@@ -1,6 +1,6 @@
 @startuml
 !include _style.iuml
-title Sequence Diagram: Calculate Reservation Price\n(POST /api/v1/coworkingspaces/:id/price)
+title Sequence Diagram: Calculate Reservation Price\n(GET /api/v1/coworkingspaces/:id/price)
 
 actor "Client\n(Postman)" as client
 participant "<<javaScript>>\n:server" as server
@@ -9,7 +9,7 @@ participant "<<controllers>>\n:coworkingspaces" as ctrl
 participant "<<model>>\n:CoworkingSpace" as model
 database "<<MongoDB>>\n:coworkingspaces" as db
 
-client -> server ++ : req.post('/api/v1/coworkingspaces/:id/price')\n{startTime, endTime}
+client -> server ++ : req.get('/api/v1/coworkingspaces/:id/price')\n?startTime=<ms>&endTime=<ms>
 server -> router ++ : app.use('/api/v1/coworkingspaces', coworkingspaces)
 router -> ctrl ++ : calculateReservationPrice
 ctrl -> model ++ : findById(id)
@@ -20,6 +20,8 @@ alt co-working space not found
   ctrl --> client : 404 No co-working space with the id
 else no hourly rate
   ctrl --> client : 400 "<name> has no hourly rate"
+else no times / not Unix timestamps in ms
+  ctrl --> client : 400 {success:false, message: reason}
 else space found
   ctrl -> ctrl : checkReservationTime(startTime, endTime, coworkingSpace)
   alt missing / invalid date / past / end not after start /\nnot same day / outside opening hours
