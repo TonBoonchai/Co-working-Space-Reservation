@@ -93,7 +93,7 @@ Example closure body (a closure can span many days):
 Import both files from [`postman/`](postman/) into Postman, select the **Co-working Space Reservation - Local** environment, and run the collection with the **Collection Runner**. Or run it from the terminal (with the server running):
 
 ```bash
-npm install -g newman newman-reporter-htmlextra
+npm install                 # newman and the htmlextra reporter are devDependencies
 npm run test:api            # CLI output
 npm run test:api:report     # also writes newman/report.html
 npm run test:race           # concurrent reservation + closure requests (about 15 s)
