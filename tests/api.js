@@ -52,7 +52,12 @@ const main = async () => {
   try {
     await removeTestData({
       emails: [values.adminEmail, values.userEmail],
-      spaceIds: [values.spaceAId, values.spaceBId],
+      // extraSpaceIds: spaces that a request made by mistake (see folder 14)
+      spaceIds: [
+        values.spaceAId,
+        values.spaceBId,
+        ...JSON.parse(values.extraSpaceIds || "[]"),
+      ],
     });
   } catch (err) {
     console.error("TEARDOWN ERROR:", err.message);

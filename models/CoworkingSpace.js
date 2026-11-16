@@ -33,6 +33,17 @@ const CoworkingSpaceSchema = new mongoose.Schema({
     required: [true, "Please add a close time"],
     match: [TIME_HHMM_REGEX, "Close time must be in HH:mm format (e.g. 20:00)"],
   },
+  // Price in whole Thai Baht (THB) per hour. 0 marks a free space.
+  hourlyRate: {
+    type: Number,
+    required: [true, "Please add an hourly rate (THB per hour)"],
+    cast: "Hourly rate must be a number (THB per hour)",
+    min: [0, "Hourly rate can not be less than 0 THB per hour"],
+    validate: {
+      validator: Number.isInteger,
+      message: "Hourly rate must be a whole number of Baht",
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,
